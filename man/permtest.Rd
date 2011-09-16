@@ -49,6 +49,12 @@ Lunneborg, Cliff. Data Analysis by Resampling, Duxbury Press, 1999. ISBN 0-534-2
 Pesarin, F. 2001. Multivariate Permutation Tests, John Wiley & Sons.
 
 Welch, W. J., Construction of permutation tests, Journal of American Statistical Association, 85:693-698, 1990.
+
+  Wang, B. and Wertelecki, W. (2012) 
+  Density Estimation for Data With Rounding Errors.
+  \emph{Computational Statistics and Data Analysis}, 
+  (in press), doi: 10.1016/j.csda.2012.02.016. 
+
 }
 
 \seealso{

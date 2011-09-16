@@ -23,7 +23,7 @@
 }
 
 
-.wmean <- function(x,f){
+.wtmean <- function(x,f){
   if(length(x)!=length(f))stop("'x' and 'f' have different lengths.")
   sele1 = !is.na(x)
   sele2 = !is.na(f)
@@ -33,7 +33,7 @@
   sum(x*f)/sum(f)
 }
 
-.wsd <- function(x,f){
+.wtsd <- function(x,f){
   if(length(x)!=length(f))stop("'x' and 'f' have different lengths.")
   sele1 = !is.na(x)
   sele2 = !is.na(f)
@@ -45,7 +45,7 @@
 }
 
 .renorm <- function(X,F,B){
-  theta = c(.wmean(X,F),.wsd(X,F));
+  theta = c(.wtmean(X,F),.wtsd(X,F));
   N=length(X)
   if(length(B)==1) B = rep(B,N)
   .Fortran(.F_remlenorm,

@@ -22,10 +22,13 @@ smkde(x,f,bw,gridsize=512L,na.rm=TRUE,just="center",binned=FALSE, scale=1.0)
   \item{scale}{Numeric.  Default=1.0.}
 }
 \author{
-	Blower, Gordon and Kelsall, Julia, (2002). "Nonlinear kernel density estimation for binned data: convergence in entropy", Bernoulli, 8(4), 423-449.
+ Blower, Gordon and Kelsall, Julia, (2002). 
+ Nonlinear kernel density estimation for binned data: convergence in entropy. 
+ \emph{Bernoulli}, 
+ 8(4), 423-449.
 }
 \seealso{
-	\code{\link{bfmm}}.
+ \code{\link{bfmm}}.
 }
 \examples{
 

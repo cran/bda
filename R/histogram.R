@@ -1,10 +1,121 @@
-## Construct histogram
+
+##  function histo(...).  Return an R object 'hist'.  Update the
+##  object returned by histo(...).
+
+histo <- function(x, weights, nclass, binned = FALSE, range.x)
+{
+  name <- deparse(substitute(x))
+  if (!is.numeric(x)) 
+    stop("'x' must be numeric")
+  if(any(is.na(x))) stop("'x' contains missing value(s)")
+  if(!missing(weights)){
+    if (!is.numeric(weights)) 
+      stop("'weights' must be numeric")
+    stopifnot(all(weights>0))
+  }
+ 
+  if(missing(range.x)){
+    a = min(x); b = max(x);
+  }else{
+    a = range.x[1L]; b = range.x[2L]
+  }
+  if(binned){
+    if(missing(weights)){  # 'x' is prebinned/rounded, but not tabled
+      tmp = table(x)
+      x0 = as.numeric(names(tmp));
+      y0 = as.numeric(tmp);
+      N = length(x)
+    }else{
+      x0 = x; y0 = weights;
+      N = sum(weights)
+    }
+    nclass = length(x0)
+    bw = diff(x0); h = bw[1]
+    stopifnot(all(bw==h))  # stop if not equally binned
+    y0 = y0/(N*h)
+    breaks = c(x0 - h/2, x0[nclass] + h/2)
+  }else{
+    if (missing(nclass)) nclass = 'lscv'
+    if (is.character(nclass)) {
+      nclass <- match.arg(tolower(nclass),
+                          c("sturges", "fd", "freedman-diaconis", "scott", "lscv"))
+      nclass <- switch(nclass,
+                       sturges = nclass.Sturges(x), 
+                       `freedman-diaconis` = ,
+                       fd = nclass.FD(x),
+                       scott = nclass.scott(x),
+                       lscv = .bwlscv(x, w = weights),
+                       stop("unknown 'breaks' algorithm"))
+    }
+    h = (b-a)/nclass
+    breaks = seq(a, b, length = nclass + 1)
+    y0 = .wbin(x, weights, breaks)
+    x0 = breaks[-1] - h*0.5
+    y0 = y0/(sum(y0)*h)
+    N = length(x)
+  }
+
+  tmp = structure(
+    list(breaks = breaks, counts = y0 * N,
+         intensities = y0, density = y0, mids = x0,
+         xname = name, equidist=FALSE), class="histogram")
+
+  out = structure(
+    list(y = y0, x = x0, n = N, nclass = nclass, 
+         data.name = name, plot=tmp), class = "hist")
+  return(out)
+}
+
+print.hist <- function (x, digits = NULL, ...) 
+{
+  cat("\nData: ", x$data.name, 
+      " (", x$n, " obs.)\n", sep = "")
+  print(summary(as.data.frame(x[c("x", "y")])), digits = digits, 
+        ...)
+  invisible(x)
+}
+
+plot.hist  <- function (x,  ...)   plot(x$plot,...)
+
+lines.hist  <- function (x,  ...)   lines(x$plot,...)
+
+
+
+.bwlscv <- function(x, w){
+  n = length(x)
+  xrange = diff(range(x))
+  if(missing(w)) w = rep(1, n)
+  if(n<=5) nclass = 2
+  else{
+    n1 = min(round(n * 0.2),5)
+    n2 = min(round(n * 0.5),30)
+    Jh=NULL; m=NULL
+    for(i in n1:n2){
+      h = xrange/i
+      Jh = c(Jh,.Jh(x,w,h));
+      m = c(m,i)
+    }
+    nclass = m[which(Jh==min(Jh))[1]]
+  }
+  nclass
+}
+
+.Jh <- function(x,w,h){
+  n = length(x)
+  x0 = seq(min(x),max(x),by=h)
+  fhat = diff(c(edf(x,weights=w, xgrid=x0)$y,1))
+  Jh = 2/h/(n-1)-(n+1)/h/(n-1)*sum(fhat^2)
+}
+
+
+#####################################################################
+## Construct histogram  ('histo')
 
 .hist <- function(x,m){
   x=x[!is.na(x)]; n=length(x);  
   h = diff(range(x))/m
   x0 = seq(min(x),max(x),by=h)
-  fhat = diff(c(edf(x,x0)$y,1))
+  fhat = diff(c(edf(x,xgrid=x0)$y,1))
   Jh = 2/h/(n-1)-(n+1)/h/(n-1)*sum(fhat^2)
   fhat = fhat/h
   list(Jh=Jh,y=fhat,x=x0,m=m)
@@ -20,7 +131,7 @@
   a = switch(ijust,center=-0.5,left=0,right=-1)
   x0 = seq(min(x)+a, max(x)+1.0+a, by=h)
   m = length(x0)-1
-  fhat = diff(c(edf(x,x0)$y,1))
+  fhat = diff(c(edf(x,xgrid=x0)$y,1))
   Jh = 2/h/(n-1)-(n+1)/h/(n-1)*sum(fhat^2)
   fhat = fhat/h
   list(Jh=Jh,y=fhat,x=x0,m=m)
@@ -37,7 +148,7 @@
   list(Jh=Jh,m=m)
 }
 
-histo <- function(x, m=NULL, alpha=0.05, binned=FALSE,just="center",scale=1.0){
+.histo <- function(x, m=NULL, alpha=0.05, binned=FALSE,just="center",scale=1.0){
   name <- deparse(substitute(x))
   if(!binned){
     out = .binhist(x,just,scale)
@@ -65,87 +176,15 @@ histo <- function(x, m=NULL, alpha=0.05, binned=FALSE,just="center",scale=1.0){
   fhat = out$y
   if(alpha>1|alpha<0)stop("Invalid confidence level.")
   if(alpha>0.5) alpha=1-alpha
-  epsn = qnorm(1-alpha/2/m)/2*sqrt(m/n)
+  epsn = 0.5 * qnorm(1 - 0.5 * alpha/m)*sqrt(m/n)
   LFn = sqrt(fhat) - epsn;
   LFn[LFn<0] = 0; LFn=LFn^2
   UFn = (sqrt(fhat) + epsn)^2
 
-  return(structure(list(y=fhat,x=out$x, l=LFn,u=UFn,
-                        Jhs = Jhs, Jh=Jh, ms=ms, m=m, n = n,
-                        data = x, data.name = name
-                        ), class = "hist"))
+ out = structure(list(y=fhat,x=out$x, l=LFn,u=UFn,
+   Jhs = Jhs, Jh=Jh, ms=ms, m=m, n = n,
+   data = x, plot=NULL,
+   data.name = name), class = "hist")
+  out
 }
 
-print.hist <- function (x, digits = NULL, ...) 
-{
-  cat("\nData: ", x$data.name, 
-      " (", x$n, " obs.); J(h)=",x$Jh, ", m=",x$m,"\n", sep = "")
-  print(summary(as.data.frame(x[c("x", "y","l","u")])), digits = digits, 
-        ...)
-  invisible(x)
-}
-
-plot.hist  <- 
-function (x, main = NULL, xlab = NULL, ylab = "Probability", lwd=1,col=1,
-    zero.line = TRUE, scb=FALSE, ...) 
-{
-  if (is.null(xlab)) 
-    xlab <- paste("N =", x$n, "J(h)=",formatC(x$Jh), "m=",x$m)
-  if (is.null(main)) 
-    main <- deparse(x$data.name)
-  if(scb){
-    plot.default(x$x,x$u, ylim=c(0,max(x$u)),
-                 main = main, xlab = xlab, ylab = ylab, type='n',...)
-    n = length(x$y)
-    segments(x$x[1],0,x$x[1],x$y[1], lwd=lwd,col=col)
-    segments(x$x[1],x$y[1],x$x[2],x$y[1], lwd=lwd,col=col)
-    ul = x$u[1];ll=x$l[1];x0=x$x[1]
-    for(i in 2:(n-1)){
-      ul = c(ul,x$u[i-1],x$u[i])
-      ll = c(ll,x$l[i-1],x$l[i])
-      x0 = c(x0,x$x[i],x$x[i])
-      segments(x$x[i],x$y[i-1],x$x[i],x$y[i], lwd=lwd,col=col)
-      segments(x$x[i],x$y[i],x$x[i+1],x$y[i], lwd=lwd,col=col)
-    }
-    ul = c(ul,x$u[n])
-    ll = c(ll,x$l[i])
-    x0 = c(x0,2*x$x[n]-x$x[n-1])
-    segments(x$x[n],x$y[n],x$x[n],0, lwd=lwd,col=col)
-  
-    cord.x = c(x0,rev(x0));
-    cord.y = c(ll,rev(ul))
-    polygon(cord.x,cord.y,border=col,lty=2)
-  }else{
-    hist(x$data,breaks=x$x,main=main, probability=TRUE,xlab=xlab,ylab=ylab,...)
-  }
-  
-  if (zero.line) 
-    abline(h = 0, lwd = 0.1, col = "gray")
-  invisible(NULL)
-}
-
-lines.hist  <- 
-function (x, lwd=1,col=1, zero.line = TRUE, ...) 
-{
-  n = length(x$y)
-  n = length(x$y)
-  segments(x$x[1],0,x$x[1],x$y[1], lwd=lwd,col=col)
-  segments(x$x[1],x$y[1],x$x[2],x$y[1], lwd=lwd,col=col)
-  ul = x$u[1];ll=x$l[1];x0=x$x[1]
-  for(i in 2:(n-1)){
-    ul = c(ul,x$u[i-1],x$u[i])
-    ll = c(ll,x$l[i-1],x$l[i])
-    x0 = c(x0,x$x[i],x$x[i])
-    segments(x$x[i],x$y[i-1],x$x[i],x$y[i], lwd=lwd,col=col)
-    segments(x$x[i],x$y[i],x$x[i+1],x$y[i], lwd=lwd,col=col)
-  }
-  ul = c(ul,x$u[n])
-  ll = c(ll,x$l[i])
-  x0 = c(x0,2*x$x[n]-x$x[n-1])
-  segments(x$x[n],x$y[n],x$x[n],0, lwd=lwd,col=col)
-  cord.x = c(x0,rev(x0));
-  cord.y = c(ll,rev(ul))
-  polygon(cord.x,cord.y,border=col,lty=2)
-
-  invisible(NULL)
-}

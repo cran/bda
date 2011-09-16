@@ -15,7 +15,14 @@ OFC data for singleton live births with gestational age at least 38 weeks.
   }
 }
 \references{
-Wang, B and Wertelecki, W, CSDA paper.
+  Wang, B. and Wertelecki, W. (2012) 
+  Density Estimation for Data With Rounding Errors.
+  \emph{Computational Statistics and Data Analysis}, 
+  (in press), doi: 10.1016/j.csda.2012.02.016. 
+}
+\seealso{
+ \code{\link{birth}},
+ \code{\link{zr}}.
 }
 
 \keyword{datasets}

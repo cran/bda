@@ -13,7 +13,7 @@
     if(missing(h))
       h <-   (1/(4*pi))^(1/10)*(243/(35*n))^(1/5)*sqrt(var(x))*15^(1/5)
     gcounts <- .Fortran(.F_linbin, as.double(x), as.integer(n),
-             as.double(a), as.double(b), as.integer(M), double(M))[[6]]
+                        as.double(a), as.double(b), as.integer(M), double(M))[[6]]
     ## Compute kernel weights
     delta  <- (b - a)/(h * (M-1L))
     L <- min(floor(4./delta), M)

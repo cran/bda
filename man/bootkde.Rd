@@ -11,7 +11,7 @@
 }
 \usage{
 bootkde(x, method='z.score',scale=1, rounding = 'nearest',
-                    from, to, alpha=0.05, gridsize=512L,na.rm=TRUE)
+                    from, to, alpha=0.05, gridsize=512L,na.rm=TRUE, iter=100)
 \method{plot}{bcb}(x, main = NULL, xlab = "x", ylab = "Probability",
             lwd=1, col=1, lty=1, zero.line = TRUE,
             bgcol='gray',scb=FALSE, ...)
@@ -33,7 +33,9 @@ bootkde(x, method='z.score',scale=1, rounding = 'nearest',
   
   \item{alpha}{Significance level to compute the confidence bands.}
 
-  \item{na.rm}{Remove missing values by default.}			   
+  \item{na.rm}{Remove missing values by default.}	
+
+  \item{iter}{Iteration number used to construct the bootstrap confidence bands.  Default: 100.}		   
 
   \item{gridsize}{The size of grid where the densities will be evaluated.}
   
@@ -66,9 +68,11 @@ bootkde(x, method='z.score',scale=1, rounding = 'nearest',
 
 }
 
-\references{ Wang, B. and Wertelecki, W. (2011) 
- A Bootstrap Kernel Density Estimator for Data With Rounding Errors, 
- \emph{Computational Statistics and Data Analysis}, (submitted)
+\references{
+  Wang, B. and Wertelecki, W. (2012) 
+  Density Estimation for Data With Rounding Errors.
+  \emph{Computational Statistics and Data Analysis}, 
+  (in press), doi: 10.1016/j.csda.2012.02.016. 
 }
 
 \note{
@@ -76,7 +80,7 @@ bootkde(x, method='z.score',scale=1, rounding = 'nearest',
 }
 
 \seealso{
-\code{\link{binning}}
+\code{\link{rounding}}
 }
 
 \examples{
@@ -95,14 +99,14 @@ bootkde(x, method='z.score',scale=1, rounding = 'nearest',
 #c(alpha,lambda)
 
 data(birth)
-(ofc = binning(birth$Head))
-(bwt = binning(birth$Weight, scale=100))
+(ofc = rounding(birth$Head))
+(bwt = rounding(birth$Weight, scale=100))
 (out0 = bfmm(ofc, m=1))
 
 mu = 34.5; s = 1.5
 y = rnorm(100,mu,s) #raw data
 x = round(y) #rounded data
-binx = binning(x)
+binx = rounding(x)
 
 x0 = seq(min(y)-sd(y),max(y)+sd(y),length=200)
 f0 = dnorm(x0,mu,s)

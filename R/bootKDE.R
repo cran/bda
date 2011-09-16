@@ -1,7 +1,7 @@
 
 
 bootkde <- function(x, method='z.score',scale=1, rounding = 'nearest',
-                    from, to, alpha=0.05, gridsize=512L,na.rm=TRUE)
+                    from, to, alpha=0.05, gridsize=512L,na.rm=TRUE,iter=100)
 {
   method <- match.arg(tolower(method),c("z.score","quantile","cdf"))
   name <- deparse(substitute(x))
@@ -11,7 +11,7 @@ bootkde <- function(x, method='z.score',scale=1, rounding = 'nearest',
     else stop("'x' contains missing values.")
   }
   n = length(x)
-  out = binning(x, scale=scale, method=rounding)
+  out = rounding(x, scale=scale, method=rounding)
 
   X = out$x; F=out$counts; B=out$width/2; A=-B; N=length(X)
 
@@ -39,7 +39,7 @@ bootkde <- function(x, method='z.score',scale=1, rounding = 'nearest',
     para=as.double(h))$y
   y=cumsum(y)
   
-  tmp = as.matrix(rep(sum(F),1000), ncol=1);
+  tmp = as.matrix(rep(sum(F),iter), ncol=1);
   ## simulate the rounding errors by a pilot estimate of F(x) based on a BME
   out = apply(tmp,1, .bootemp,x=gpoints,y=X,f=F,lb=A,ub=B,
     Fx=y,from=from,to=to)

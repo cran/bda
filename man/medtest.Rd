@@ -34,6 +34,11 @@ MacKinnon, D. P., Warsi, G., & Dwyer, J. H. (1995). A simulation study of mediat
 Preacher, K. J., & Hayes, A. F. (2004). SPSS and SAS procedures for estimating indirect effects in simple mediation models. \emph{Behavior Research Methods,Instruments, & Computers}, 36, 717-731.
     
 Preacher, K. J., & Hayes, A. F. (2008). asymptotic and resampling strategies for assessing and comparing indirect effects in multiple mediator models. \emph{Behavior Research Methods, Instruments, & Computers}, 40, 879-891.
+
+  Wang, B. and Wertelecki, W. (2012) 
+  Density Estimation for Data With Rounding Errors.
+  \emph{Computational Statistics and Data Analysis}, 
+  (in press), doi: 10.1016/j.csda.2012.02.016. 
 }
 \seealso{
  \code{\link{gof},\link{perm.test}}.

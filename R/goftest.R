@@ -50,7 +50,7 @@ gof.default <- function(object, x, type='chisq',...)
       gamma  = pgamma(x0, mle.gamma(x)),
       weibull  = pweibull(x0, mle.weibull(x))
       )
-    Fn = edf(x,x0)
+    Fn = edf(x,xgrid=x0)
     D2 = max(abs(Fx-Fn$y))
     ft = D2*sqrt(n);
     p2 = .Fortran(.F_kspvalue, p=as.double(ft))$p
@@ -92,7 +92,7 @@ gof.em <- function(object, x,type='chisq',...) {
     mname = "Kolmogorov-Smirnov Test for goodness-of-test."
     x0 = seq(min(x),max(x),length=100)
     Fx = pmixnorm(x0, object$Para[,1], object$Para[,2],object$Para[,3])
-    Fn = edf(x,x0)
+    Fn = edf(x,xgrid=x0)
     D2 = max(abs(Fx-Fn$y))
     ft = D2*sqrt(n);
     p2 = .Fortran(.F_kspvalue, p=as.double(ft))$p
@@ -120,7 +120,7 @@ gof.bde <- function(object, x,...) {
   
   x0 = object$x; bws = diff(x0); bws = c(bws[1],bws)
   F0 = cumsum(object$y*bws)
-  Fn = edf(x,x0)$y;
+  Fn = edf(x,xgrid=x0)$y;
   D = max(abs(F0-Fn))
   ft = D*sqrt(n);
   out = .Fortran(.F_kspvalue, p=as.double(ft))

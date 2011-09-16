@@ -50,7 +50,7 @@ bfmm(x,m=2,mu,type='gaussian',method='nelder',range.x, ...)
   defined in R, or defined manually.
 
   If \code{x} is raw data, one can also specify \code{scale} and rounding
-  \code{method}, as in \code{\link{binning}}.
+  \code{method}, as in \code{\link{rounding}}.
 }
 
 \value{
@@ -67,9 +67,11 @@ The density can be computed by using function \code{density}.
 
 }
 
-\references{ Wang, B. and Wertelecki, W. (2011) 
- A Bootstrap Kernel Density Estimator for Data With Rounding Errors, 
- \emph{Computational Statistics and Data Analysis}, (submitted)
+\references{
+  Wang, B. and Wertelecki, W. (2012) 
+  Density Estimation for Data With Rounding Errors.
+  \emph{Computational Statistics and Data Analysis}, 
+  (in press), doi: 10.1016/j.csda.2012.02.016. 
 }
 
 \note{
@@ -79,7 +81,7 @@ The specified types of \code{type} are applicable for \code{m=1}.  When
 }
 
 \seealso{
-\code{\link{binning}}
+\code{\link{rounding}}
 }
 
 \examples{
@@ -98,14 +100,14 @@ The specified types of \code{type} are applicable for \code{m=1}.  When
 #c(alpha,lambda)
 
 data(birth)
-(ofc = binning(birth$Head))
-(bwt = binning(birth$Weight, scale=100))
+(ofc = rounding(birth$Head))
+(bwt = rounding(birth$Weight, scale=100))
 (out0 = bfmm(ofc, m=1))
 
 mu = 34.5; s = 1.5
 y = rnorm(100,mu,s) #raw data
 x = round(y) #rounded data
-binx = binning(x)
+binx = rounding(x)
 
 x0 = seq(min(y)-sd(y),max(y)+sd(y),length=200)
 f0 = dnorm(x0,mu,s)

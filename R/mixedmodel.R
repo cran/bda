@@ -149,7 +149,7 @@ density.mm <- function(x,x0,gridsize=500,...)
 bfmm.data.frame <- function(x,m=2,mu,type='gaussian',method='nelder',range.x,...){
   name <- deparse(substitute(x))
   if(is.null(x$x)||is.null(x$widths)||is.null(x$counts))
-    stop("Information missing in data 'x'. Try 'help(binning)'.")
+    stop("Information missing in data 'x'. Try 'help(rounding)'.")
   
   out = structure(list(x = x$x, widths = x$widths, counts = x$counts,
     scale = 1.0, data.name = name), class='bdata')
@@ -158,7 +158,7 @@ bfmm.data.frame <- function(x,m=2,mu,type='gaussian',method='nelder',range.x,...
 
 bfmm.numeric <- function(x,m=2,mu,type='gaussian',method='nelder',
                          range.x,scale=1, rounding = 'nearest',...){
-  out = binning(x, scale=scale, method=rounding)
+  out = rounding(x, scale=scale, method=rounding)
   bfmm(out,m=m,mu=mu,type=type,method=method,...)  
 }
 

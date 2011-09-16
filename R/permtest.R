@@ -14,7 +14,7 @@ perm.default <- function(x,y,fun,alternative = "two.sided",
   xnam <- deparse(substitute(x));
   ynam <- deparse(substitute(y));
   nam = paste(xnam, '(',length(x), ') vs ', ynam, '(',length(y),")")
-  if(trials<500) warning("Trial number might be too small.")
+  ##  if(trials<500) warning("Trial number might be too small.")
   ##  check data (x,y)
   if (!is.numeric(x) && !is.complex(x) && !is.logical(x)) {
     warning("'x' is not numeric or logical: returning NA")
@@ -65,8 +65,8 @@ perm.default <- function(x,y,fun,alternative = "two.sided",
   ## users. The radomization should be a step in the main program. 
   rngx = range(c(x,y))
   x0 = seq(rngx[1],rngx[2],length=256);
-  Fx1 = edf(x,x0);
-  Fx2 = edf(y,x0);
+  Fx1 = edf(x,xgrid=x0);
+  Fx2 = edf(y,xgrid=x0);
   max(abs(Fx1$y-Fx2$y))
 }
 

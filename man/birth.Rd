@@ -23,6 +23,13 @@ Birth data for singleton live births with gestational age at least 38 weeks.
   }
 }
 \references{
-Wang, CSDA and JSS papers.
+  Wang, B. and Wertelecki, W. (2012) 
+  Density Estimation for Data With Rounding Errors.
+  \emph{Computational Statistics and Data Analysis}, 
+  (in press), doi: 10.1016/j.csda.2012.02.016. 
+}
+\seealso{
+ \code{\link{zr}},
+ \code{\link{ofc}}.
 }
 \keyword{datasets}
