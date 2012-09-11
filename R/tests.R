@@ -34,8 +34,8 @@ gof.default <- function(object, x, type='chisq',...)
   if(DF>0 && type == 'chisq'){
     Fx = switch(dist,
       normal = pnorm(out$x[-1],mean(x),sd(x)),
-      gamma  = pgamma(out$x[-1], mle.gamma(x)),
-      weibull  = pweibull(out$x[-1], mle.weibull(x))
+      gamma  = pgamma(out$x[-1], .mle.gamma(x)),
+      weibull  = pweibull(out$x[-1], .mle.weibull(x))
       )
     EXs = c(Fx[1],diff(Fx))
     es = n*c(EXs,1-sum(EXs))
@@ -47,8 +47,8 @@ gof.default <- function(object, x, type='chisq',...)
     x0 = seq(min(x),max(x),length=100)
     Fx = switch(dist,
       normal = pnorm(x0,mean(x),sd(x)),
-      gamma  = pgamma(x0, mle.gamma(x)),
-      weibull  = pweibull(x0, mle.weibull(x))
+      gamma  = pgamma(x0, .mle.gamma(x)),
+      weibull  = pweibull(x0, .mle.weibull(x))
       )
     Fn = edf(x,xgrid=x0)
     D2 = max(abs(Fx-Fn$y))
@@ -169,3 +169,117 @@ gof.bde <- function(object, x,...) {
 }
 
 
+.mle.gamma <- function(x){
+  x = x[!is.na(x)]
+  .Fortran(.F_FitGamma, as.double(x),
+           as.integer(length(x)), as.double(rep(0,2)))[[3]]
+}
+
+.mle.weibull <- function(x){
+  x = x[!is.na(x)]
+  .Fortran(.F_FitWeibull, as.double(x),
+           as.integer(length(x)), as.double(rep(0,2)))[[3]]
+}
+
+
+##perm.test <-
+##  function(x,y,fun,alternative = "two.sided", trials = 1000,...)
+##  UseMethod("perm")
+
+##  if fun is missing, define it as comparing distributional
+##  difference; otherwise, user-defined.
+perm.test <- function(x,y,fun,alternative = "two.sided", 
+                      trials = 1000,...)
+{
+  xnam <- deparse(substitute(x));
+  ynam <- deparse(substitute(y));
+  nam = paste(xnam, '(',length(x), ') vs ', ynam, '(',length(y),")")
+  ##  if(trials<500) warning("Trial number might be too small.")
+  ##  check data (x,y)
+  if (!is.numeric(x) && !is.complex(x) && !is.logical(x)) {
+    warning("'x' is not numeric or logical: returning NA")
+    return(NA_real_)
+  }
+  x <- x[!is.na(x)]
+  if (!is.numeric(y) && !is.complex(y) && !is.logical(y)) {
+    warning("'y' is not numeric or logical: returning NA")
+    return(NA_real_)
+  }
+  y <- y[!is.na(y)]
+
+  alternative = match.arg(tolower(alternative),
+      c("one.sided","two.sided"))
+
+    
+  ## use of replicate() with parameters:
+  if(missing(fun)) fun = .edfperm
+
+  D = fun(x,y)
+  rfun <- function(x,y){
+    nx = length(x); ny = length(y); n = nx + ny;
+    n0 = sample(n)
+    xy = c(x,y)
+    fun(xy[n0[1:nx]], xy[n0[(nx+1):n]])
+  }
+  bar <- function(n, x,y) replicate(n, rfun(x=x,y=y))
+  z = bar(trials, x=x,y=y)
+
+  ##  z = replicate(trials, fun(x=x,y=y))
+  ##  z = apply(as.matrix(rep(1,trials),ncol=1),1,fun,x=x,y=y)
+  pv = switch(alternative,
+    two.sided = mean(abs(D) <= abs(z)),
+    one.sided = mean(D <= z),
+    stop("Wrong test type!")
+    )
+
+  RVAL <- list(statistic = c(D = D), p.value = pv,
+               method = "Permutation test to compare two samples/populations.", 
+               data.name = nam)
+  class(RVAL) <- "htest"
+  return(RVAL)
+
+}
+
+.edfperm <- function(x,y){
+  ## no randomization within this function.  It could be defined by
+  ## users. The radomization should be a step in the main program. 
+  rngx <- range(c(x,y))
+  x0 <- seq(rngx[1],rngx[2],length=256);
+  Fx1 <- edf(x,xgrid=x0);
+  Fx2 <- edf(y,xgrid=x0);
+  sele <- is.na(Fx1$y) | is.na(Fx2$y)
+  max(abs((Fx1$y-Fx2$y)[!sele]))
+}
+
+mediation.test <- function(mv,iv,dv){
+  ## mx: mediation variable
+  ## iv:  indep. variable
+  ## dv: dep. var.
+  if(any(is.na(mv)))stop("Mediator contains missing value(s)")
+  if(any(is.na(iv)))stop("Mediator contains missing value(s)")
+  if(any(is.na(dv)))stop("Mediator contains missing value(s)")
+  nm = length(mv); ni = length(iv); nd = length(dv);
+  if(nm!=ni | nm!=nd | ni!=nd) stop("Variables have different lengths.")
+  tmp = summary(lm(mv~iv));
+  a = tmp$coef[2,1];sa=tmp$coef[2,2];
+  tmp = summary(lm(dv~mv+iv));
+  b = tmp$coef[2,1];sb=tmp$coef[2,2];
+  tmp1 = b^2*sa^2+a^2*sb^2
+  tmp2 = sa^2*sb^2
+  zsob = a*b/sqrt(tmp1);
+  psob = pnorm(-abs(zsob))*2;
+  zaro = a*b/sqrt(tmp1+tmp2);
+  paro = pnorm(-abs(zaro))*2;
+  if(tmp1>tmp2){
+    zgm = a*b/sqrt(tmp1-tmp2)
+    pgm = pnorm(-abs(zgm))*2;
+  }else{
+    zgm=NA
+    pgm=NA;
+  }
+  p.value=c(psob,paro,pgm)
+  z.value = c(zsob,zaro,zgm)
+  out = data.frame(rbind(z.value,p.value));
+  names(out)=c("Sobel","Aroian","Goodman")
+  out
+}

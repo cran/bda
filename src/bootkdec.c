@@ -149,8 +149,8 @@ void hbmise(double *x,double *f, double *w, int *size, double *hopt)
 {
   int ngrid = 50, n=size[0],i,j,nsum=0;
   double h0,h,hstep,h2;
-  double xbar,s,tmp1,tmp2,mise, fint,fb;
-  double w2[n],w1_2[n],w1_2sq[n];
+  double tmp1,tmp2,mise, fint,fb;
+  double w1_2[n],w1_2sq[n];
   double mise0=9999999999.;
   Fun7p fn[1];
   fn[0] = fa; //To compute part A to be integrated.
@@ -161,12 +161,9 @@ void hbmise(double *x,double *f, double *w, int *size, double *hopt)
     nsum += f[i];
     tmp1 = tmp1 + x[i]*f[i];
     tmp2 = tmp2 + x[i] * x[i]*f[i];
-    w2[i] = pow(w[i],2.0);
     w1_2[i] = w[i]/2.0;
     w1_2sq[i]=pow(w1_2[i],2.0);
   }
-  xbar = tmp1 / nsum;
-  s = sqrt((tmp2 - nsum * xbar * xbar) / (nsum -1.));
   // initialize bandwidths
   h0 = hopt[0];
   h = h0/30.;

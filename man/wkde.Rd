@@ -28,10 +28,14 @@ density of the weighted data.
 \item{bandwidth}{
   the kernel bandwidth smoothing parameter.  Larger values of
   \code{bandwidth} make smoother estimates, smaller values of
-  \code{bandwidth} make less smooth estimates.  
+  \code{bandwidth} make less smooth estimates.  Automatic bandwidth 
+  selectors are developed.  Options include \code{wnrd}, \code{wnrd0},
+  \code{wmise},\code{blscv}, and \code{awmise}.
 }
-\item{freq}{An indicator showing whether \code{w} shows the 
-   counts (frequencies) of \code{x} values.}
+\item{freq}{
+  An indicator showing whether \code{w} is a vector of frequecies
+  (counts) or weights.
+}
 \item{gridsize}{
 the number of equally spaced points at which to estimate
 the density.
@@ -61,8 +65,12 @@ vector of sorted \code{x} values at which the estimate was computed.
 vector of density estimates
 at the corresponding \code{x}.
 }
-\item{data}{
-An R object "wdata".
+\item{bw}{
+  optimal bandwidth.
+}
+\item{sp}{
+  sensitivity parameter, none \code{NA} if adaptive 
+  bandwidth selector is used.
 }
 }
 
@@ -93,87 +101,45 @@ Wang, B. and Wang, X-F. (2007).
 "Bandwidth Selection for Weighted Kernel Density Estimation".
 }
 \seealso{
-  \code{\link{bw.nrd}},
-  \code{\link{density}},
-  \code{\link{hist}}.
+  \code{\link{lprde}}.
 }
 \examples{
 
-## OFC simulated data
- mu = 34.5; s=1.5
- x <- round(rnorm(30000,mu,s))
- x0 = seq(min(x)-sd(x),max(x)+sd(x), length=100)
- f0 = dnorm(x0, mu,s)
-est0 = density(x); est0$bw
+ mu = 34.5; s=2.5; n = 10000
+ x = round(rnorm(n, mu, s),1)
+ x0 = seq(min(x)-s,max(x)+s, length=100)
+ f0 = dnorm(x0,mu, s);  ymax <- max(f0*1.2)
 
-plot(est0, type="l")
- lines(f0~x0, col=1, lty=2)
+ xt = table(x); n = length(x)
+ x1 = as.numeric(names(xt))
+ w1 = as.numeric(xt)
+ 
+ est1 <- wkde(x1,w1, bandwidth='nrd0',freq=TRUE)
+ est2 <- wkde(x1,w1, bandwidth='nrd',freq=TRUE)
+ est3 <- wkde(x1,w1, bandwidth='amise',freq=TRUE)
+ est4 <- wkde(x1,w1, bandwidth='mise',freq=TRUE)
+ est5 <- wkde(x1,w1, bandwidth='lscv',freq=TRUE)
+ est6 <- wkde(x, bandwidth='lscv')
 
-## rule-of-thumb
-est1 <- wkde(x)
-lines(est1, col=2)
-est2 <- wkde(x, bandwidth='wnrd')
-lines(est2, col=4)
+ est0 = density(x1,bw="SJ",weights=w1/sum(w1)); 
 
-est3 <- wkde(x, bandwidth='wmise')
-lines(est3, col=5)
-est4 <- wkde(x, bandwidth='awmise')
-lines(est4, col=6)
+ plot(f0~x0, xlim=c(min(x),max(x)), ylim=c(0,ymax), 
+   xlab="x", ylab="Density", type="l")
+ lines(est0, col=1, lty=2, lwd=2)
 
-legend(max(est0$x), max(est0$y), xjust=1,yjust=1,
-  legend=c("density", "wnrd0","wnrd","wmise","awmise","True"),
-  lty=c(1,1,1,1,1,2), col=c(1,2,4,5,6,1))
+ lines(est1, col=2)
+ lines(est2, col=3)
+ lines(est3, col=4)
+ lines(est4, col=5)
+ lines(est5, col=6)
+ lines(est5, col=6,lty=2)
+ legend(max(x),ymax,xjust=1,yjust=1,cex=.8,
+  legend=c("N(34.5,1.5)", "SJ", "nrd0",
+  "nrd","amise","mise","lscv(x,w)","lscv(raw)"),
+  col = c(1,1,2,3,4,5,6,6), 
+  lty = c(1,2,1,1,1,1,1,2),
+  lwd=c(1,2,1,1,1,1,1,1))
 
-
-###  Faithful data
-
-data(faithful)
-x <- faithful$eruptions
-est0 = density(x); est0$bw
-
-est <- wkde(x, bandwidth=0.25)
-
-plot(est0, type="l")
-
-## rule-of-thumb
-est1 <- wkde(x)
-lines(est1, col=2)
-est2 <- wkde(x, bandwidth='wnrd')
-lines(est2, col=4)
-
-est3 <- wkde(x, bandwidth='wmise')
-lines(est3, col=5)
-est4 <- wkde(x, bandwidth='awmise')
-lines(est4, col=6)
-
-legend(max(est0$x), max(est0$y), xjust=1,yjust=1,
-  legend=c("density", "wnrd0","wnrd","wmise","awmise"),
-  lty=c(1,1,1,1,1), col=c(1,2,4,5,6))
-
-## biased sampling
- n = 1000; mu = 34.5; s = 5
- x = rnorm(n,mu,s); x = sort(x)
- fx = function(x,mu,s) dnorm(x,mu,s)*x/mu # length biasing
- x0 = seq(min(x)-s,max(x)+s,length=100)
- f0 = fx(x0,mu,s)
- fn = dnorm(x0, mu, s)
- plot(f0~x0, type='l',col=2, lwd=2)
- lines(fn~x0, lty=2, col=2, lwd=2)
- lines(density(x), col=4, lwd=2)
- f1 = wkde(x,w=x)
- lines(f1, col=1, lwd=2)
-
- f2 = wkde(x,w=x, bandwidth='wmise')
- lines(f2, col=1, lty=2, lwd=2)
-
- f3 = wkde(x,w=x, bandwidth='awmise')
- lines(f3, col=1, lty=3, lwd=2)
-
-legend(max(x0), max(f0), xjust=1,yjust=1,
-  legend=c("true", "biased","density(...)","f.rot","wmise","awmise"),
-  lty=c(1,2,1,1,2,3), col=c(2,2,4,1,1,1),lwd=c(2,2,2,2,2,2))
 
 }
-\keyword{distribution}
 \keyword{smooth}
-% Converted by Sd2Rd version 0.2-a5.

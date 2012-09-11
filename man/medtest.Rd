@@ -27,13 +27,21 @@ Missing values are not allowed.
   B. Wang  \email{bwang@jaguar1.usouthal.edu}
 }
 \references{
-MacKinnon, D. P., & Dwyer, J. H. (1993). Estimating mediated effects in prevention studies. \emph{Evaluation Review}, 17, 144-158.
+ MacKinnon, D. P., & Dwyer, J. H. (1993). Estimating mediated effects 
+ in prevention studies. \emph{Evaluation Review}, 17, 144-158.
 
-MacKinnon, D. P., Warsi, G., & Dwyer, J. H. (1995). A simulation study of mediated effect measures. \emph{Multivariate Behavioral Research}, 30, 41-62.
+ MacKinnon, D. P., Warsi, G., & Dwyer, J. H. (1995). A simulation study 
+ of mediated effect measures. \emph{Multivariate Behavioral Research}, 
+ 30, 41-62.
 
-Preacher, K. J., & Hayes, A. F. (2004). SPSS and SAS procedures for estimating indirect effects in simple mediation models. \emph{Behavior Research Methods,Instruments, & Computers}, 36, 717-731.
+ Preacher, K. J., & Hayes, A. F. (2004). SPSS and SAS procedures for 
+ estimating indirect effects in simple mediation models. 
+ \emph{Behavior Research Methods,Instruments, & Computers}, 36, 717-731.
     
-Preacher, K. J., & Hayes, A. F. (2008). asymptotic and resampling strategies for assessing and comparing indirect effects in multiple mediator models. \emph{Behavior Research Methods, Instruments, & Computers}, 40, 879-891.
+ Preacher, K. J., & Hayes, A. F. (2008). asymptotic and resampling 
+ strategies for assessing and comparing indirect effects in multiple 
+ mediator models. \emph{Behavior Research Methods, Instruments, & 
+Computers}, 40, 879-891.
 
   Wang, B. and Wertelecki, W. (2012) 
   Density Estimation for Data With Rounding Errors.
@@ -50,5 +58,5 @@ iv = rnorm(100)
 dv = rnorm(100)
 mediation.test(mv,iv,dv)
 }
-\keyword{test}
+\keyword{htest}
 

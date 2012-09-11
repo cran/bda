@@ -12,6 +12,7 @@
 
 // Rprintf:  printing from a C routine compiled into R
 
+
 void awcdf(double x[],int nx,double w[],double h,double hs[],
 	   double y[],int ny,double Fy[])
 {
@@ -27,7 +28,7 @@ void awcdf(double x[],int nx,double w[],double h,double hs[],
  
 
 void awpdf(double x[], int nx, double w[], double h, double hs[],
-	       double y[], int ny, double fy[], int rr)
+	       double y[], int ny, double fy[])
 {
   int i,j;
   double kappa = 0.0;
@@ -38,15 +39,11 @@ void awpdf(double x[], int nx, double w[], double h, double hs[],
   //  }
   for(i=0;i<ny;i++){
     for(j=0;j<nx;j++){
-      if(rr!=1){
-	fy[i] += w[j]*dnorm(y[i]-x[j],0.,h*hs[j],0);
+      if(x[j]<4.*h){
+	fy[i] += w[j]*(dnorm(y[i]-x[j],0.,h*hs[j],0) + 
+		       dnorm(y[i]+x[j],0.,h*hs[j],0));
       }else{
-	if(x[j]<4.*h){
-	  fy[i] += w[j]*(dnorm(y[i]-x[j],0.,h*hs[j],0) + 
-			    dnorm(y[i]+x[j],0.,h*hs[j],0));
-	}else{
-	  fy[i] += w[j]*dnorm(y[i]-x[j],0.,h*hs[j],0);
-	}
+	fy[i] += w[j]*dnorm(y[i]-x[j],0.,h*hs[j],0);
       }
     }
     //    fy[i] /=wsum;
@@ -79,7 +76,7 @@ static double wise2(int npar, double *pars, void *ex)
   double x[n],hs[n],w[n],fx[n],h0;
   h0 = tmp[1]; //second element is h0
   double sp=pars[1], h= pars[0]; 
-  if(sp<0.|sp>1.){
+  if((sp<0.)||(sp>1.)){
     GetRNGstate();sp=runif(0.,1.);PutRNGstate();
   }
   for(i=0;i<n;i++) {//restore auxiliary information from ex;
@@ -93,7 +90,7 @@ static double wise2(int npar, double *pars, void *ex)
     PutRNGstate();
   }
   for(i=0;i<n;i++) hs[i]=1.0;
-  awpdf(x,n,w,h,hs,x,n,fx,0);
+  awpdf(x,n,w,h,hs,x,n,fx);
   UpdateBwfactor(fx,n,sp,hs);
   
   for(i=0;i<n;i++)
@@ -127,7 +124,7 @@ static double wise1(int npar, double *pars, void *ex)
     h = runif(0.001,5*h0);
     PutRNGstate();
   }
-  awpdf(x,n,w,h,hs,x,n,fx,0);
+  awpdf(x,n,w,h,hs,x,n,fx);
   for(i=0;i<n;i++){ res += w[i]*(fx[i]-w[i]*M_1_SQRT_2PI/h)/(1.-w[i]);}
   res *= -2.;
   for(i=0;i<n;i++){
@@ -141,9 +138,9 @@ static double wise1(int npar, double *pars, void *ex)
 
 void awkde(double *x,double *w,int *xsize,
 	   double *y, double *fy, double *Fy, 
-	   int *ysize, double *pars, int *RR)
+	   int *ysize, double *pars)
 {
-  int i,j,k,rr=RR[0],nx=xsize[0],ny=ysize[0],npar=2;
+  int i,nx=xsize[0],ny=ysize[0],npar=2;
   double h0,h,hs[nx],fx[nx],sp=0.8; //sp=sensitivity parameter;
   double dpar[npar],opar[npar]; 
   h0 = pars[0]; h=h0;
@@ -170,21 +167,21 @@ void awkde(double *x,double *w,int *xsize,
     h=opar[0]; 
     pars[0]=h; pars[1]=0.;
   }else{
-    awpdf(x,nx,w,h,hs,x,nx,fx,0);
+    awpdf(x,nx,w,h,hs,x,nx,fx);
     UpdateBwfactor(fx,nx,sp,hs);
     pars[0]=h; pars[1]=sp;
   }
   
-  awpdf(x,nx,w,h,hs,y,ny,fy,rr);
+  awpdf(x,nx,w,h,hs,y,ny,fy);
   awcdf(x,nx,w,h,hs,y,ny,Fy);
 }
 
 void wkde(double *x,double *w,int *xsize,
 	   double *y, double *fy, double *Fy, 
-	   int *ysize, double *pars, int *RR)
+	   int *ysize, double *pars)
 {
-  int i,j,k,rr=RR[0],nx=xsize[0],ny=ysize[0],npar=2;
-  double h0,h,hs[nx],fx[nx],sp=0.8; //sp=sensitivity parameter;
+  int i,nx=xsize[0],ny=ysize[0],npar=2;
+  double h0,h,hs[nx], sp=0.8; //sp=sensitivity parameter;
   double dpar[npar],opar[npar]; 
   h0 = pars[0]; h=h0;
   dpar[0]=h; dpar[1] = sp;
@@ -207,21 +204,21 @@ void wkde(double *x,double *w,int *xsize,
   h=opar[0]; 
   pars[0]=h; pars[1]=0.;
   
-  awpdf(x,nx,w,h,hs,y,ny,fy,rr);
+  awpdf(x,nx,w,h,hs,y,ny,fy);
   awcdf(x,nx,w,h,hs,y,ny,Fy);
 }
 
 void ckde(double *x,double *w,int *xsize,
 	   double *y, double *fy, double *Fy, 
-	   int *ysize, double *pars, int *RR)
+	   int *ysize, double *pars)
 {
-  int i,j,k,rr=RR[0],nx=xsize[0],ny=ysize[0];
-  double h,hs[nx],fx[nx];
+  int i,nx=xsize[0],ny=ysize[0];
+  double h,hs[nx];
 
   h = pars[0]; 
   for(i=0;i<nx;i++){hs[i]=1.;}
   
-  awpdf(x,nx,w,h,hs,y,ny,fy,rr);
+  awpdf(x,nx,w,h,hs,y,ny,fy);
   awcdf(x,nx,w,h,hs,y,ny,Fy);
 }
 

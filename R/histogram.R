@@ -2,110 +2,49 @@
 ##  function histo(...).  Return an R object 'hist'.  Update the
 ##  object returned by histo(...).
 
-histo <- function(x, weights, nclass, binned = FALSE, range.x)
+histogram <- function(x, w, nclass, binwidth, lb,
+                      range.x, freq=FALSE, truncate = TRUE)
 {
-  name <- deparse(substitute(x))
-  if (!is.numeric(x)) 
-    stop("'x' must be numeric")
-  if(any(is.na(x))) stop("'x' contains missing value(s)")
-  if(!missing(weights)){
-    if (!is.numeric(weights)) 
-      stop("'weights' must be numeric")
-    stopifnot(all(weights>0))
-  }
- 
-  if(missing(range.x)){
-    a = min(x); b = max(x);
-  }else{
-    a = range.x[1L]; b = range.x[2L]
-  }
-  if(binned){
-    if(missing(weights)){  # 'x' is prebinned/rounded, but not tabled
-      tmp = table(x)
-      x0 = as.numeric(names(tmp));
-      y0 = as.numeric(tmp);
-      N = length(x)
+  x.bin <- .binning(x=x, w=w, nclass=nclass, binwidth=binwidth,
+                    lb=lb, range.x=range.x, freq=freq,
+                    truncate = truncate)
+}
+
+
+
+histospline <-
+  function(x,f,gridsize=512L,na.rm=TRUE,just="center",
+           binned=FALSE, scale=1.0){
+    name <- deparse(substitute(x))
+    if(scale <= 0) stop("Wrong 'scale' level.")
+    x = x/scale
+    ##  bin data if x is not binned.
+    if(binned){
+      if(missing(f))stop("Frequencies missing!")
+      ijust = match.arg(tolower(just),
+        c("center","left","right"))
+      a = switch(ijust,center=0,left=0.5,right=-0.5)
+      x1 = data.frame(x=x+a,f=f,b=0.5)
+      X = x1$x; F = f;
     }else{
-      x0 = x; y0 = weights;
-      N = sum(weights)
+      if(any(is.na(x))) x = x[!is.na(x)]
+      x0 = .discretize(x,na.rm=na.rm,just=just)
+      X=x0$x; F=x0$f;
     }
-    nclass = length(x0)
-    bw = diff(x0); h = bw[1]
-    stopifnot(all(bw==h))  # stop if not equally binned
-    y0 = y0/(N*h)
-    breaks = c(x0 - h/2, x0[nclass] + h/2)
-  }else{
-    if (missing(nclass)) nclass = 'lscv'
-    if (is.character(nclass)) {
-      nclass <- match.arg(tolower(nclass),
-                          c("sturges", "fd", "freedman-diaconis", "scott", "lscv"))
-      nclass <- switch(nclass,
-                       sturges = nclass.Sturges(x), 
-                       `freedman-diaconis` = ,
-                       fd = nclass.FD(x),
-                       scott = nclass.scott(x),
-                       lscv = .bwlscv(x, w = weights),
-                       stop("unknown 'breaks' algorithm"))
-    }
-    h = (b-a)/nclass
-    breaks = seq(a, b, length = nclass + 1)
-    y0 = .wbin(x, weights, breaks)
-    x0 = breaks[-1] - h*0.5
-    y0 = y0/(sum(y0)*h)
-    N = length(x)
-  }
-
-  tmp = structure(
-    list(breaks = breaks, counts = y0 * N,
-         intensities = y0, density = y0, mids = x0,
-         xname = name, equidist=FALSE), class="histogram")
-
-  out = structure(
-    list(y = y0, x = x0, n = N, nclass = nclass, 
-         data.name = name, plot=tmp), class = "hist")
-  return(out)
+    rf = F/sum(F)
+    out = spline(X,rf,n=gridsize)
+    f0 = out$y
+    f0[f0<0]=0
+    gpoints = out$x
+    return(structure(list(y=f0/scale,x=gpoints*scale,bw=NULL,scale=scale,
+                          call = match.call(), data.name = name),
+                     class='bde'))
 }
 
-print.hist <- function (x, digits = NULL, ...) 
-{
-  cat("\nData: ", x$data.name, 
-      " (", x$n, " obs.)\n", sep = "")
-  print(summary(as.data.frame(x[c("x", "y")])), digits = digits, 
-        ...)
-  invisible(x)
-}
 
-plot.hist  <- function (x,  ...)   plot(x$plot,...)
-
-lines.hist  <- function (x,  ...)   lines(x$plot,...)
+##  the following codes are to compute the optimal bin numbers
 
 
-
-.bwlscv <- function(x, w){
-  n = length(x)
-  xrange = diff(range(x))
-  if(missing(w)) w = rep(1, n)
-  if(n<=5) nclass = 2
-  else{
-    n1 = min(round(n * 0.2),5)
-    n2 = min(round(n * 0.5),30)
-    Jh=NULL; m=NULL
-    for(i in n1:n2){
-      h = xrange/i
-      Jh = c(Jh,.Jh(x,w,h));
-      m = c(m,i)
-    }
-    nclass = m[which(Jh==min(Jh))[1]]
-  }
-  nclass
-}
-
-.Jh <- function(x,w,h){
-  n = length(x)
-  x0 = seq(min(x),max(x),by=h)
-  fhat = diff(c(edf(x,weights=w, xgrid=x0)$y,1))
-  Jh = 2/h/(n-1)-(n+1)/h/(n-1)*sum(fhat^2)
-}
 
 
 #####################################################################
@@ -187,4 +126,128 @@ lines.hist  <- function (x,  ...)   lines(x$plot,...)
    data.name = name), class = "hist")
   out
 }
+
+## pre-bin the (weighted) data to a sequence of equally-spaced bins
+
+.binning <- function(x, w, nclass, binwidth, lb, range.x,
+                     freq=FALSE, truncate = TRUE){
+  x.wt <- .weighting(x,w,freq=freq,na.rm=TRUE)
+  if (missing(range.x))
+    range.x <- c(min(x.wt$x), max(x.wt$x))
+  a <- range.x[1L];  b <- range.x[2L]    
+  
+  if(missing(lb)) lb <- a;
+  if(missing(binwidth)){
+    if(missing(nclass)) nclass <- "Sturges"
+    if (is.character(nclass)){ 
+      nclass <- match.arg(tolower(nclass),
+                          c("sturges","fd", "freedman-diaconis",
+                            "scott", "lscv"))
+      nclass <- switch(nclass,
+                       sturges = .nclass.Sturges(x.wt$size), 
+                       `freedman-diaconis` = ,
+                       fd = .nclass.FD(x.wt),
+                       scott = .nclass.scott(x.wt),
+                       lscv = .nclass.lscv(x.wt),
+                       stop("unknown 'breaks' algorithm"))
+    } else if (is.function(nclass)) {
+      nclass <- nclass(x.wt)
+    }
+    if (!is.numeric(nclass) || !is.finite(nclass) || nclass < 1) 
+      stop("invalid number of 'nclass'")
+    
+    binwidth <- (b-a)/nclass
+  }else{ # if binwidth is specified, nclass need to be recalculated
+    nclass <- ceiling((b-a)/binwidth)
+  }
+
+  out <- .wbin(X=x.wt$x, W=x.wt$w, a=lb, bw=binwidth, ngrid=nclass+1,
+               linbin = FALSE, truncate = truncate)
+
+  x.hist <- structure(list(breaks = out$breaks,
+                           counts = out$gcounts * x.wt$size,
+                           intensities = out$gcounts/binwidth,
+                           density = out$gcounts/binwidth,
+                           mids = out$gpoints,
+                           bw=binwidth, nclass=nclass,
+                           xname = x.wt$name, equidist=FALSE),
+                      class="histogram")  
+}
+
+.nclass.scott <- function (x) 
+{
+  if(class(x) != "wtdata") x.wt <- .weighting(x)
+  else x.wt <- x
+  size <- x$size
+  h <- 3.5 * .wsd(x) * size^(-1/3)
+  if (h > 0) 
+    ceiling(diff(range(x$x))/h)
+  else 1L
+}
+
+.nclass.FD <- function (x)  
+{
+  x <- ifelse(class(x) != 'wtdata',.weighting(x),x)
+  size <- x$size
+  h <- .wiqr(x)
+  if (h == 0){
+    cf <- abs(cumsum(x$w)-0.5)
+    h <- x$x[which(cf==min(cf))[1]]
+  }
+  if (h > 0) 
+    ceiling(diff(range(x$x))/(2 * h * size^(-1/3)))
+  else 1L
+}
+
+.nclass.Sturges <- function (n) 
+  ceiling(log2(n) + 1)
+
+.nclass.lscv <- function(x){
+  x.wt <- ifelse(class(x) != 'wtdata',.weighting(x),x)
+  n <- x$size; x <- x.wt$x; w <- x.wt$w
+  xrange = diff(range(x))
+  if(n<=5) nclass = 2
+  else{
+    n1 = min(round(n * 0.2),5)
+    n2 = min(round(n * 0.5),30)
+    Jh=NULL; m=NULL
+    for(i in n1:n2){
+      h = xrange/i
+      Jh = c(Jh,.Jh(x,w,h));
+      m = c(m,i)
+    }
+    nclass = m[which(Jh==min(Jh))[1]]
+  }
+  nclass
+}
+
+.Jh <- function(x,w,h){
+  n = length(x)
+  x0 = seq(min(x),max(x),by=h)
+  fhat = diff(c(edf(x,weights=w, xgrid=x0)$y,1))
+  Jh = 2/h/(n-1)-(n+1)/h/(n-1)*sum(fhat^2)
+}
+
+## For application of linear binning to a univariate data set.
+.wbin <- function(X, W, a, bw, ngrid, linbin=TRUE, truncate = TRUE)
+{
+  n <- length(X)
+  if(missing(W)) W <- rep(1,n)
+  stopifnot(length(W)==n)
+  if(missing(a)) a <- min(X)
+  stopifnot(bw>0)
+  if(truncate) trun <- 1L else trun <- 0L
+  if(linbin) lbin <- 1L else lbin <- 0L
+  
+  gcounts <- .Fortran(.F_GridBinning, as.double(X), as.double(W),
+                      as.integer(n), as.double(a), as.double(bw),
+                      as.integer(ngrid), as.integer(trun),
+                      as.integer(lbin), wts = double(ngrid))$wts
+  xgrid <- seq(from=a, by=bw, length=ngrid)
+  gpoints <- xgrid[-1] - bw*0.5
+  if(!linbin) gcounts <- gcounts[-ngrid];
+  
+  list(breaks=xgrid, gcounts=gcounts,gpoints=gpoints)
+}
+
 

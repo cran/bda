@@ -34,13 +34,8 @@ mu = c(34.5,40)
 s=c(1.5,1.3)
 x = rmixnorm(300,p,mu,s)
 y = round(x,0)
-x0 = seq(min(x),max(x),length=100)
-plot(dmixnorm(x0,p,mu,s)~x0,type='l')
-lines(density(x), col=3,lty=3)
-lines(density(y), col=4,lty=4)
 out = histospline(y)
-lines(out,col=2,lty=2)
 
 }
-\keyword{stats}
+\keyword{smooth}
 

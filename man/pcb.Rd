@@ -42,11 +42,6 @@ plot(out)
 (out2= pcb(out))
 lines(out2, col=2)
 
-x = rnorm(10000, 34.5, 1.5)
-(out = histo(x, nclass=6))
-plot(out)
-(out2= pcb(out))
-lines(out2)
 
 }
 \keyword{stats}

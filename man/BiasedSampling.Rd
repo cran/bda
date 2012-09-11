@@ -40,7 +40,6 @@ Wang, B. and Wang, X-F. (2007).
 "Bandwidth Selection for Weighted Kernel Density Estimation".
 }
 \seealso{
-  \code{\link{tkde}},
   \code{\link{density}},
   \code{\link{wkde}}.
 }
@@ -51,6 +50,5 @@ bs.w.length(x)
 bs.W.length(x)
 
 }
-\keyword{distribution}
-\keyword{smooth}
+\keyword{stats}
 % Converted by Sd2Rd version 0.2-a5.

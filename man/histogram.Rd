@@ -1,8 +1,8 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{histo}
-\alias{histo}
+\name{histogram}
+\alias{histogram}
 \alias{print.hist}
 \alias{plot.hist}
 \alias{lines.hist}
@@ -12,14 +12,20 @@
 Draw histogram based on data with rounding errors.
 }
 \usage{
-  histo(x, weights, nclass, binned = FALSE, range.x)
+  histogram(x, w, nclass, binwidth, lb,
+      range.x, freq=FALSE, truncate = TRUE)
 }
 \arguments{
   \item{x}{a numeric value or a vector.}
-  \item{weights}{A vector of weights for the values of \code{x}}
+  \item{w}{A vector of weights for the values of \code{x}}
   \item{nclass}{Number of classes}
-  \item{binned}{Have the data been binned.  Default: FALSE.}
-  \item{range.x}{The range of \code{x}}
+  \item{binwidth}{bin width.}
+  \item{lb}{Lower bound of the first bin.}
+  \item{range.x}{The range of \code{x} where 
+    the histogram will be constructed.}
+  \item{freq}{Whether \code{w} (if given) are frequencies.}
+  \item{truncate}{Whether or not to truncate the data fall
+    beyond the \code{range.x}.}
 }
 \details{
   If \code{nclass} is missing and the data are not prebinned, the 
@@ -43,18 +49,16 @@ Draw histogram based on data with rounding errors.
   B. Wang  \email{bwang@jaguar1.usouthal.edu}
 }
 \seealso{
- \code{\link{edf}}, \code{\link{pcb}}, \code{\link{hist}}.
+ \code{\link{hist}}.
 }
 \examples{
 
  ofc = round(rnorm(1000,34.5,1.5))
- (out = histo(ofc, binned=TRUE))
+ (out = histogram(ofc,lb=min(ofc)-0.5, binwidth=1))
  plot(out)
  x0 = seq(28,42, length=100)
  lines(dnorm(x0,34.5,1.5)~x0, col=2)
- out1 = histolpr(ofc, binned = TRUE)
- lines(out1, col=4)
 
 }
-\keyword{stats}
+\keyword{smooth}
 

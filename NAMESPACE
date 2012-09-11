@@ -1,4 +1,5 @@
 useDynLib(bda, .registration = TRUE, .fixes = ".F_")
 export(.bdaConnect)
-##export everything that does not start with a .
 exportPattern("^[^\\.]")
+
+

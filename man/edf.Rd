@@ -30,9 +30,7 @@ To compute the empirical distribution function.}
 x = rnorm(100)
 (out = edf(x))
 plot(out)
-(out2= pcb(out))
-lines(out2)
 
 }
-\keyword{stats}
+\keyword{distribution}
 
