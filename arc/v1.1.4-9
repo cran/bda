@@ -1,0 +1,13 @@
+Initialized on September 16, 2011.
+
+09/16/2011: initialize the package.
+11/13/2011: update perm.test to enable user-defined fun's.
+11/15/2011: add gof function for 'em' (maybe also 'bde' or known 
+       distributions by distribution names (character)).
+11/27/2011: merge binem with bfmm.  Fixed several bugs in mixedmodel.c
+       Adjust AIC/AICc?BIC due to the data transformation.
+11/28/2011: density: for transformed/untransformed data; 
+       and x0 given or not given.
+12/31/2011: change package name to BDA.  Add functions/data for CSDA paper.
+01/06/2012: change package name back to bda.
+03/15/2012: local polynomial regression for density estimation based on pre-binned data

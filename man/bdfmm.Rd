@@ -13,8 +13,6 @@
 }
 \usage{
 bfmm(x,m=2,mu,type='gaussian',method='nelder',range.x, ...)
-\method{density}{mm}(x,x0,gridsize=500,...)
-\method{print}{mm}(x,...)
 }
 \arguments{
   \item{x}{Raw data, or a data frame prepared manually, or an 
@@ -22,10 +20,6 @@ bfmm(x,m=2,mu,type='gaussian',method='nelder',range.x, ...)
 	\code{print} functions, 
 	\code{x} is
 	a fitted object of class \code{mm}.}
-  \item{x0}{A vector where the densities will be computed.  
-  If it is missing, a default vector of size \code{gridsize}
-  will be used instead.
-  }
   \item{m}{Number of mixture components.  Default: 2.}
   \item{mu}{The centers of the mixture components.  If \code{mu} is 
   provided, \code{m} will be ignored and \code{m=length(mu)}. 
@@ -40,7 +34,6 @@ bfmm(x,m=2,mu,type='gaussian',method='nelder',range.x, ...)
   The default is the minimum and maximum data values, extended by the
   bin width.
   }
-  \item{gridsize}{The size of grid where the densities will be evaluated.}
   \item{...}{Controls}
 }
 
@@ -65,6 +58,9 @@ parameters (including the mixing coefficients) are stored in
 
 The density can be computed by using function \code{density}.
 
+}
+\author{
+  B. Wang  \email{bwang@southalabama.edu}
 }
 
 \references{

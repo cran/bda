@@ -135,8 +135,8 @@ histospline <-
   if (missing(range.x))
     range.x <- c(min(x.wt$x), max(x.wt$x))
   a <- range.x[1L];  b <- range.x[2L]    
-  
-  if(missing(lb)) lb <- a;
+  if(!missing(binwidth)&&missing(lb)) lb <- a-binwidth/2
+  else if(missing(lb)) lb <- a;
   if(missing(binwidth)){
     if(missing(nclass)) nclass <- "Sturges"
     if (is.character(nclass)){ 

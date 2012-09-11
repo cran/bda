@@ -21,7 +21,7 @@ To compute the pointwise confidence bands.}
   \item{...}{Controls}
 }
 \author{
-  B. Wang  \email{bwang@jaguar1.usouthal.edu}
+  B. Wang  \email{bwang@southalabama.edu}
 }
 \seealso{
  \code{\link{edf}}.

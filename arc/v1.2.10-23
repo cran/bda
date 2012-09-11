@@ -1,0 +1,54 @@
+Initialized on September 16, 2011.
+
+09/16/11: 
+  Initialize the package.
+
+11/13/11: 
+  Update perm.test to enable user-defined fun's.
+
+11/15/11: 
+  Add gof function for 'em' (maybe also 'bde' or known distributions by 
+    distribution names (character)).
+
+11/27/11: 
+  Merge binem with bfmm.  Fixed several bugs in mixedmodel.c
+  Adjust AIC/AICc/BIC due to the data transformation.
+
+11/28/11: 
+  Density: for transformed/untransformed data; and x0 given or not given.
+
+12/31/11: 
+  Change package name to BDA.  
+  Add functions/birth defect data (zr) for CSDA paper.
+
+01/06/12: 
+  Change package name back to bda.
+
+07/22/12: 
+  Add data 'zr' (OFC data analysis for a monograph to be published).
+
+07/23/12: change 'binning' to 'rounding' (different binning schemes will be 
+	added for smoothing).
+
+07/24/12: update function "hits" to add 'weights' option and some others.  	
+	Update function "edf" by adding weights option.
+	Update "pcb" method.
+
+07/25/2012:  
+  adding KernSmooth as a dependent R package.  
+
+09/12/2012: 
+  Remove redundant code: getbdata;
+  Update .Rd file for two data sets: ofc/birth;
+
+10/23/2012: check 'wide' and prepare a manuscript for JBMBS.
+	a) Check keywords for all Rd files.
+	b) remove blpreg to remove the dependence on KernSmooth
+
+
+
+To be done
+
+  Clean the em algorithm/add parametric cases (GGamma/GBeta).  
+  Also add a me sure of goodness of fit for two density curves.
+  Double check smooth-KDE and histo-spline. 

@@ -1,7 +1,7 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{gof}
+\name{gof.test}
 \alias{gof}
 \alias{gof.em}
 \alias{gof.bde}
@@ -12,7 +12,7 @@
   To perform goodness-of-fit test.
 }
 \usage{
-  gof(object, x,...)
+  gof.test(object, x,...)
 }
 \arguments{
   \item{x}{A sample data.}
@@ -22,7 +22,7 @@
   \item{...}{Controls}
 }
 \author{
-  B. Wang  \email{bwang@jaguar1.usouthal.edu}
+  B. Wang  \email{bwang@southalabama.edu}
 }
 \seealso{
  \code{\link{mediation.test},\link{perm.test}}.
@@ -33,8 +33,8 @@ x = rnorm(1000,34.5,1.5)
 y = round(x,0)
 ##  fit by histospline: class=bde
 out1 = histospline(y)
-gof(out1,x)
-gof(out1,y)
+gof.test(out1,x)
+gof.test(out1,y)
 
 
 }

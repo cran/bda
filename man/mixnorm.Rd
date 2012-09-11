@@ -32,14 +32,11 @@
   \item{s}{vector of standard deviations}
 }
 \author{
-  B. Wang  \email{bwang@jaguar1.usouthal.edu}
+  B. Wang  \email{bwang@southalabama.edu}
 }
 
 \seealso{
- \code{\link{dnorm}},
- \code{\link{pnorm}},
- \code{\link{rnorm}},
- \code{\link{qnorm}}.
+ \code{\link{bfmm}}.
 }
 \examples{
 

@@ -8,7 +8,18 @@ Version numbering:
 bda_1.2.7-31:  algorithms for binned data analysis,
   data with rounding errors.
 
-bda_2.0.11-4: updated binning function and weighting 
-  function.  Added lprde (no SCB included yet).
+bda_2.0.11-4: 
+  (1) to update binning function and weighting function.  
+  (2) to add lprde (no SCB included yet).
 
-
+2012/11/05:  
+  (1) to add survival function estimation, 
+  (2) to provide a function to weight data for users. 
+  (3) to update keywords in the Rd files.
+  (4) to add bandwidth selector 'erd'
+  (5) add an bandwidth option for 'aMAE' or 'MAE'.
+2012/12/10:
+  (1) fixed a bug of different length in .fftkde
+  (2) fixed a bug in computing WIQR
+  (3) add to binning an option such that if binwidth is given
+      but 'lb' is missing, we set lb = min(x)-binwidth/2.

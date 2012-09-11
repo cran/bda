@@ -1,5 +1,7 @@
 \name{wkde}
 \alias{wkde}
+\alias{wkde.default}
+\alias{wkde.wtdata}
 \alias{print.kde}
 \encoding{UTF-8}
 \title{
@@ -11,8 +13,8 @@ kernel density estimate of the probability
 density of the weighted data.  
 }
 \usage{
- wkde(x, w, bandwidth, freq=FALSE, gridsize = 401L, range.x, 
- 	 truncate = TRUE, na.rm = TRUE)
+ wkde(x, w, bandwidth, freq=FALSE, gridsize = 512L, range.x, 
+ 	 truncate = TRUE, na.rm = TRUE,...)
 }
 \arguments{
 \item{x}{
@@ -29,8 +31,9 @@ density of the weighted data.
   the kernel bandwidth smoothing parameter.  Larger values of
   \code{bandwidth} make smoother estimates, smaller values of
   \code{bandwidth} make less smooth estimates.  Automatic bandwidth 
-  selectors are developed.  Options include \code{wnrd}, \code{wnrd0},
-  \code{wmise},\code{blscv}, and \code{awmise}.
+  selectors are developed.  Options include \code{nrd}, \code{nrd0},
+  \code{erd}, \code{aMAE}
+  \code{LSCV}, \code{MISE}, and \code{aMISE}.
 }
 \item{freq}{
   An indicator showing whether \code{w} is a vector of frequecies
@@ -54,6 +57,7 @@ range specified by \code{range.x} are ignored.
 logical flag: if \code{TRUE}, \code{NA} values will be ignored; 
 otherwise, the program will be halted with error information.
 }
+\item{...}{controls}
 }
 \value{
 a list containing the following components:
@@ -75,7 +79,7 @@ at the corresponding \code{x}.
 }
 
 \details{
-  The default bandwidth, \code{"wnrd0"}, is computed using a rule-of-thumb for 
+  The default bandwidth, \code{"nrd0"}, is computed using a rule-of-thumb for 
   choosing the bandwidth of a Gaussian kernel density estimator 
   based on weighted data.  It defaults to 0.9 times the
   minimum of the standard deviation and the interquartile range
@@ -84,12 +88,35 @@ at the corresponding \code{x}.
   eqn (3.31)) _unless_ the quartiles coincide when a positive result
   will be guaranteed.
 
-  \code{"wnrd"} is the more common variation given by Scott (1992), using
+  \code{"nrd"} is the more common variation given by Scott (1992), using
   factor 1.06.
 
-  \code{"wmise"} is a completely automatic optimal bandwidth selector
+  \code{"mise"} is a completely automatic optimal bandwidth selector
   using the least-squares cross-validation (LSCV) method by minimizing the 
-  integrated squared errors (ISE). 
+  integrated squared errors (ISE). Implemented as in Wang and Wang (2007).
+
+  \code{"amise"} is a completely automatic adaptive optimal bandwidth selector
+  using the least-squares cross-validation (LSCV) method by minimizing the 
+  integrated squared errors (ISE). Implemented as in Wang and Wang (2007).
+
+  \code{"lscv"} is a completely automatic optimal bandwidth selector
+  using the least-squares cross-validation (LSCV) method by minimizing the 
+  integrated squared errors (ISE). Implemented using the Fast Fourier 
+  Transformation.
+
+  \code{erd} is a rule-of-thumb bandwidth selector using an exponential 
+  reference.  Good for survival data.  
+
+  \code{aMAE} is a automatic bandwidth selector designed for survival data
+  subject to random right-censoring.  It selects the bandwidth locally by 
+  minimizing a mean absolute error (Kuhn and Padgett (1997)).
+
+  If \code{bandwidth} is missing, the \code{MISE} bandwidth selector will 
+  be used by default.
+
+}
+\author{
+  B. Wang  \email{bwang@southalabama.edu}
 }
 
 \references{
@@ -99,6 +126,13 @@ Chapman and Hall, London.
 
 Wang, B. and Wang, X-F. (2007). 
 "Bandwidth Selection for Weighted Kernel Density Estimation".
+
+Kuhn, J.P. and Padgett, W.J. (1997).
+"Local bandwidth selection for kernel density estimation from right-censored 
+data based on asymptotic mean absolute error".
+\emph{Nonlinear Analysis, Theory, Methods & Applications}. 
+30, 4375-4384.
+
 }
 \seealso{
   \code{\link{lprde}}.

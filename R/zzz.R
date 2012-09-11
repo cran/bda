@@ -1,5 +1,5 @@
 .onLoad <- function(lib, pkg){
-  packageStartupMessage("bda 1.2.10-31 Copyright B. Wang 2011-2012.")
+  packageStartupMessage("bda 2.0.11-11 Copyright B. Wang 2011-2012.")
   assign('.bdaConnect',NULL,pos=.GlobalEnv) 
 }
 

@@ -68,6 +68,10 @@ bootkde(x, method='z.score',scale=1, rounding = 'nearest',
 
 }
 
+\author{
+  B. Wang  \email{bwang@southalabama.edu}
+}
+
 \references{
   Wang, B. and Wertelecki, W. (2012) 
   Density Estimation for Data With Rounding Errors.

@@ -82,6 +82,9 @@ at the corresponding \code{x}.
 \details{
   When the data are highly discretized, one can use option \code{binned=TRUE}.
 }
+\author{
+  B. Wang  \email{bwang@southalabama.edu}
+}
 
 \references{
   Wang, B. and Wang, X-F. (2012). To be updated. 

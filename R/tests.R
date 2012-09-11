@@ -1,9 +1,6 @@
 gof.test <- function(object, x, ...)
 UseMethod("gof")
 
-gof <- function(object, x, ...)
-UseMethod("gof")
-
 gof.default <- function(object, x, type='chisq',...)
 {
   nam <- deparse(substitute(x));
@@ -34,8 +31,8 @@ gof.default <- function(object, x, type='chisq',...)
   if(DF>0 && type == 'chisq'){
     Fx = switch(dist,
       normal = pnorm(out$x[-1],mean(x),sd(x)),
-      gamma  = pgamma(out$x[-1], .mle.gamma(x)),
-      weibull  = pweibull(out$x[-1], .mle.weibull(x))
+      gamma  = pgamma(out$x[-1], .mle2.gamma(x)),
+      weibull  = pweibull(out$x[-1], .mle2.weibull(x))
       )
     EXs = c(Fx[1],diff(Fx))
     es = n*c(EXs,1-sum(EXs))
@@ -47,8 +44,8 @@ gof.default <- function(object, x, type='chisq',...)
     x0 = seq(min(x),max(x),length=100)
     Fx = switch(dist,
       normal = pnorm(x0,mean(x),sd(x)),
-      gamma  = pgamma(x0, .mle.gamma(x)),
-      weibull  = pweibull(x0, .mle.weibull(x))
+      gamma  = pgamma(x0, .mle2.gamma(x)),
+      weibull  = pweibull(x0, .mle2.weibull(x))
       )
     Fn = edf(x,xgrid=x0)
     D2 = max(abs(Fx-Fn$y))
@@ -169,13 +166,13 @@ gof.bde <- function(object, x,...) {
 }
 
 
-.mle.gamma <- function(x){
+.mle2.gamma <- function(x){
   x = x[!is.na(x)]
   .Fortran(.F_FitGamma, as.double(x),
            as.integer(length(x)), as.double(rep(0,2)))[[3]]
 }
 
-.mle.weibull <- function(x){
+.mle2.weibull <- function(x){
   x = x[!is.na(x)]
   .Fortran(.F_FitWeibull, as.double(x),
            as.integer(length(x)), as.double(rep(0,2)))[[3]]

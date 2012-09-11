@@ -61,3 +61,105 @@ void GridBinning(double *x, double *w, int *nx,
   }
 }
 
+static double rcllkweibull(int npar, double *pars, void *ex)
+// to be called by the Nelder-Mead simplex method
+{
+
+  double *tmp= (double*)ex, res=0.0;
+  int i,j,n = (int)tmp[0]; //first element is the length of x;
+  double kappa = pars[0], lambda= pars[1]; 
+  double x[n], w[n];
+  
+  for(i=0;i<n;i++) {//restore auxiliary information from ex;
+    x[i] = tmp[i+1]; 
+    w[i] = tmp[i+n+1]; 
+  }
+  
+  for(i=0;i<n;i++) {
+    res += w[i]*(log(kappa) + (kappa-1.0)*log(x[i]) - kappa*log(lambda))
+      -  pow(x[i]/lambda, kappa);
+  }
+  
+  return(-res);
+}
+
+void RcMleWeibull(double *x,double *w,int *size,double *pars)
+{
+  int i,nx=size[0],npar=2;
+  double dpar[npar],opar[npar]; 
+  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
+  double abstol=0.00000000001,reltol=0.0000000000001,val;
+  int ifail=0,trace=0, maxit=1000, fncount;
+  double alpha=1.0, beta=0.5, gamma=2;
+  double yaux[2*nx+1];
+  yaux[0] = nx; //sample size
+  for(i=0;i<nx;i++){
+    yaux[i+1] = x[i];
+    yaux[i+nx+1] = w[i];
+  }
+  nmmin(npar,dpar,opar,&val,rcllkweibull,&ifail,abstol,reltol, 
+	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
+  pars[0] = opar[0]; pars[1] = opar[1];
+}
+
+/*  
+ * product limit estimate for data with right censoring
+ * Call: rcple(x,y,n[0],...);
+ *
+ */
+void rcple(double x[], double w[], int n, double y[], double h[], int m) 
+{
+  int i,j;
+  double xprod=1.0;
+  for(i=0;i<m;i++){
+    h[i] = 1.0; 
+  }
+  i = 0; j = 0;
+  while(j < m){
+    if(y[j] <= x[i]){
+      h[j] = xprod;
+      j++;
+    }else{
+      i++;
+      if(i < n)
+	xprod *= pow((n-i)/(n-i+1.0), 1.0-w[i]);
+      else xprod = 0.0;
+    }
+  }
+}
+
+
+
+void wkdemae(double *x,double *w,int *size,double *y,int *ny)
+{
+  int i, j, n=size[0], m=ny[0];
+  double lambda=0.0,delta=0.0;
+  double Hx[m], HX[n], hx[m], x0;
+  for(i=0; i<n;i++){
+    lambda += x[i];
+    delta  += w[i];
+  }
+  lambda /= delta; //mle of lambda
+  rcple(x,w,n,y,Hx,m);
+  rcple(x,w,n,x,HX,n);
+  double t1,t2;
+  t1 = 0.7644174 * lambda * pow(n,-.2);
+  t2 = 0.2/lambda;
+
+  for(i=0; i<m;i++){
+    hx[i] = t1 * exp(t2) * pow(Hx[i],-.2);
+  }
+
+  for(i=0; i<m;i++){
+    x0 = y[i]; y[i] = 0.0; // reuse y[]
+    for(j=0; j<n; j++){
+      t1 = (x0 - x[j])/hx[i];
+      y[i] += w[j]/(HX[j]*hx[i])*dnorm(t1,0.,1.0,0);
+    }
+  }
+  
+  for(i=0; i<m;i++){
+    y[i] /= n;
+  }
+
+}

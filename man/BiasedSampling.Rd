@@ -1,4 +1,4 @@
-\name{biased}
+\name{biasing}
 \alias{bs.w.length}
 \alias{bs.W.length}
 \alias{bs.w.area}
@@ -33,6 +33,10 @@ the corresponding cumulative biasing functions.
   function is the 
   inverse function of the cumulative biasing function of 
   biasing function \code{bs.w.xxx}.
+}
+
+\author{
+  B. Wang  \email{bwang@southalabama.edu}
 }
 
 \references{

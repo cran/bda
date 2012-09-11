@@ -1,16 +1,75 @@
 ### Functions:
 ## (a) wkde (b) lprde
 
+wkde <- function(x, w, bandwidth, freq=FALSE, gridsize = 512L,
+                 range.x, truncate = TRUE, na.rm=TRUE,...)
+  UseMethod("wkde")
 
-wkde <- function(x, w, bandwidth, freq=FALSE, gridsize = 401L,
-                 range.x, truncate = TRUE, na.rm=TRUE)
+wkde.default <- function(x, w, bandwidth, freq=FALSE, gridsize = 512L,
+                 range.x, truncate = TRUE, na.rm=TRUE,...)
 {
-  x.wt <- .weighting(x,w,freq=freq,na.rm=na.rm)
+  if(!missing(bandwidth)&&is.character(bandwidth)){
+    bw <- match.arg(tolower(bandwidth),
+                    c('nrd', 'nrd0','lscv','mise','amise','erd','amae','mae'))
+    if(bw=='amae'||bw=='mae'){
+      out <- .wkde.mae(x,w,gridsize=gridsize)
+    }else{
+      x.wt <- .weighting(x,w,freq=freq,na.rm=na.rm)
+      out <-   .wkde(x.wt=x.wt, bandwidth=bandwidth,gridsize=gridsize,
+                     range.x=range.x, truncate=truncate,...)
+    }
+  }else{
+    x.wt <- .weighting(x,w,freq=freq,na.rm=na.rm)
+    out <-   .wkde(x.wt=x.wt, bandwidth=bandwidth,gridsize=gridsize,
+                   range.x=range.x, truncate=truncate,...)
+  }
+  invisible(out)
+}
+
+wkde.wtdata <- function(x, w, bandwidth, freq=FALSE, gridsize = 512L,
+                 range.x, truncate = TRUE, na.rm=TRUE,...)
+{
+  if(class(x)!= 'wtdata') x <- .weighting(x,w,freq=freq,na.rm=na.rm)
+  .wkde(x.wt=x, bandwidth=bandwidth,gridsize=gridsize,
+        range.x=range.x, truncate=truncate,...)
+}
+
+.wkde.mae <- function(x,w,gridsize=512L)
+  {
+    if(any(x<0)) stop("Invalid lifetime data in 'x'")
+    n <- length(x)
+    if(missing(w)) w <- rep(1,n)
+    if(any(w!=0&&w!=1)) stop("Invalid censoring status in 'w'")
+    if(length(w)!=n) stop("'x' and 'w' have different lengths")
+    gridsize = max(512L, gridsize)  # make sure the grid is fine enough
+    M <- 2^(ceiling(log2(gridsize)))
+    range.x <- c(min(x), max(x))
+    a <- range.x[1L];  b <- range.x[2L]    
+    ## Set up grid points and bin the data
+    gpoints <- seq(a, b, length = M)
+    ## sort the data
+    ox <- order(x); x <- x[ox]; w <- w[ox]
+
+    y <- .Fortran(.F_wkdemae,as.double(x),as.double(w),
+                    as.integer(n), y=as.double(gpoints),
+                    as.integer(M))$y
+    totMass <- sum(y) *(b-a)/(M-1)
+    
+    x.wt <- .weighting(x,w,freq=FALSE,na.rm=TRUE)
+    out = structure(list(y=y/totMass, x=gpoints,
+      bw= NULL, sp = NULL,
+      call = match.call(),
+      data=x.wt, data.name = x.wt$name),
+      class = "kde")
+    invisible(out)
+
+  }
+                      
+.wkde <- function(x.wt, bandwidth, gridsize = 512L,
+                  range.x, truncate = TRUE,...)
+{
   x <- x.wt$x; w <- x.wt$w; n <- x.wt$n; size <- x.wt$size
-  ## Install safeguard against non-positive bandwidths:
-  if (!missing(bandwidth) && bandwidth <= 0)
-    stop("'bandwidth' must be strictly positive")
-  
+
   ## Set kernel support values    
   tau <-  4;
   h0 <- .bw.wnrd0(x.wt);
@@ -25,34 +84,47 @@ wkde <- function(x, w, bandwidth, freq=FALSE, gridsize = 401L,
   ## RR = 0; ##  no reflection used in this version 06/25/2012.  Features
   ##  can be added to the subroutines later.
   pars = c(h0,0)  ## for adaptive bandwidth selector: awkde
-  out <- if(missing(bandwidth))
-    .nwkde(x,w,h0,n,a,b,M,tau=tau,truncate=truncate)
-  else if(is.numeric(bandwidth))
-    .nwkde(x,w,bandwidth,n,a,b,M,tau=tau,truncate=truncate)
-  else if(is.character(bandwidth))
-    switch(tolower(bandwidth),
-           "nrd" = .nwkde(x,w,.bw.wnrd(x.wt),n,a,b,M,
-             tau=tau,truncate=truncate),
-           "nrd0" = .nwkde(x,w,h0,n,a,b,M,
-             tau=tau,truncate=truncate),
-           "lscv" = .nwkde(x, w, .bw.blscv(x.wt,h0,gridsize=M),
-             n,a,b,M,tau=tau,truncate=truncate),
-           "mise" = .Fortran(.F_wkde,as.double(x),as.double(w),
-             as.integer(n),x=as.double(gpoints),y=as.double(gpoints),
-             Fy=as.double(gpoints),as.integer(M), bw=as.double(pars)),
-           "amise" = .Fortran(.F_awkde,as.double(x),as.double(w),
-             as.integer(n),x=as.double(gpoints),y=as.double(gpoints),
-             Fy=as.double(gpoints),as.integer(M), bw=as.double(pars)),          
-           stop("Bandwidth selector not supported."))
-  else stop("Bandwidth selector not supported.")
-  
-  if(length(out$bw)==1){
-    bw = out$bw; sp=NULL;
-  }else{
-    bw = out$bw[1]; sp = out$bw[2]
+
+  ## Install safeguard against non-positive bandwidths:
+  if(missing(bandwidth)) bandwidth <- "MISE"
+  else if(is.numeric(bandwidth)){
+    stopifnot(bandwidth>0);
+    h <- bandwidth;
   }
-  out = structure(list(y=out$y,x=out$x,
-    bw= bw, sp = sp, call = match.call(),
+  else if(is.character(bandwidth)){
+    bw <- match.arg(tolower(bandwidth),
+                    c('nrd', 'nrd0','lscv','mise','amise','erd'))
+    h <- switch(bw,
+                "nrd"   = .bw.wnrd(x.wt),
+                "nrd0"  = .bw.wnrd0(x.wt),
+                "erd"   = .bw.erd(x.wt),
+                "lscv"  = .bw.blscv(x.wt,h0,gridsize=M),
+                "mise"  = .Fortran(.F_wkde,as.double(x),as.double(w),
+                  as.integer(n),x=as.double(gpoints),y=as.double(gpoints),
+                  Fy=as.double(gpoints),as.integer(M), bw=as.double(pars)),
+                "amise" = .Fortran(.F_awkde,as.double(x),as.double(w),
+                  as.integer(n),x=as.double(gpoints),y=as.double(gpoints),
+                  Fy=as.double(gpoints),as.integer(M), bw=as.double(pars)),          
+                stop(paste("Bandwidth selector '", bw, "'is not supported"))
+                )
+  }else stop("Invalid 'bandwidth'")
+
+  if(bw=='mise'||bw=='amise'){
+    bw <- h$bw[1]; sp <- h$bw[2]
+    fx <- h$y
+  }else if(bw=='amae'){
+    bw <- NULL; sp <- NULL
+    fx <- h$y
+  }else{
+    bw <- h; sp <- NULL;
+    out <- .fftwkde(x,w,h,n,a,b,M,tau=tau,truncate=truncate)
+    fx <- out$y
+  }
+
+  totMass <- sum(fx) *(b-a)/(M-1)
+
+  out = structure(list(y=fx/totMass, x=gpoints, bw= bw, sp = sp,
+    call = match.call(),
     data=x.wt, data.name = x.wt$name),
     class = "kde")
   invisible(out)
@@ -103,6 +175,26 @@ lprde <- function(x, w, bandwidth, nclass,  binwidth, lb, gridsize = 512L,
             class='nprde')
 }
 
+weighting <- function(x,w,freq=FALSE,na.rm=TRUE, type, method,...)
+  UseMethod("weighting")
+
+weighting.default <- function(x,w,freq=FALSE,na.rm=TRUE,type,
+                              method, ...)
+{
+  ##  support plain weighted data and random censoring data
+  ##  (2012/11/04)
+  if(missing(type)) out <- .weighting(x=x,w=w,freq=freq,na.rm=na.rm)
+  else{
+    stopifnot(is.character(type))
+    type = match.arg(tolower(type), c('rc'))
+    out <- switch(type,
+                  rc = .rcweighting(x=x,w=w,freq=freq,na.rm=na.rm,
+                    method=method),
+                  stop(paste("Data type '",type,"'not supported"))
+                  )
+  }
+}
+
 
 ## 2012/10/30: to prepare data for analysis.  Check for NA and
 ## infinite values.  If weights are missing, tabulate the data in case
@@ -131,35 +223,125 @@ lprde <- function(x, w, bandwidth, nclass,  binwidth, lb, gridsize = 512L,
   x.finite <- is.finite(x)
   totMass <- mean(x.finite)
   x <- x[x.finite]; w <- w[x.finite];
-  w <- tapply(w,x,sum)
-  x <- unique(x); n <- length(x);  
+  out <- tapply(w,x,sum)
+  x <- as.numeric(names(out));
+  w <- as.numeric(out)
+  n <- length(x);  
   
-  structure(list(x = x, w = w/sum(w), n = n, size = size, totMass =
-                 totMass, data.name = name), class='wtdata') }
+  structure(list(x = x, w = w/sum(w), n = n, size = size,
+                 totMass = totMass, type=NULL, method=NULL,
+                 pars=NA, data.name = name),
+            class='wtdata')
+}
+
+## last updated: 2012/11/04
+
+.rcweighting <- function(x,w,freq=FALSE,na.rm=TRUE,method="Nelson"){
+  name <- deparse(substitute(x))
+  if(missing(w)) stop("Censoring information 'w' is missing")
+  if(any(!(w==1|w==0)))
+    stop("Invalid censoring status in 'w'")
+  x.na <- is.na(x) | is.na(w)
+  if(any(x.na)){
+    if(na.rm){
+      x <- x[!x.na]; w <- w[!x.na]
+    }
+    else stop("'x' contains missing value(s)")
+  }
+  ##  sample size should consider the Inf's (i.e. survival data
+  ##  analysis)
+  size <- length(x)
+  x.finite <- is.finite(x)
+  totMass <- mean(x.finite)
+  x <- x[x.finite]; w <- w[x.finite];
+  lambda.hat <- sum(x)/sum(w)
+  if(missing(method)) method <- "Nelson"
+  tmp <- .Sx(x,w,method=method)
+  w <- diff(rev(c(1,tmp$y)))
+  x <- tmp$x
+  out <- tapply(w,x,sum)
+  x <- as.numeric(names(out));
+  w <- as.numeric(out)
+  n <- length(x);  
+  totMass <- tmp$totMass
+  structure(list(x = x, w = w/sum(w), n = n, size = size,
+                 totMass = totMass, type="Random Right Censored",
+                 method=tmp$method, pars=lambda.hat,
+                 data.name = name),
+            class='wtdata')
+}
+
+.Sx <- function(x,w,method="Nelson"){
+  method <- match.arg(tolower(method), c('km', 'pl','product','kaplan',
+                                         'na','aalen','nelson'))
+  switch(method,
+         km=, pl=, product=,
+         kaplan = .Sx.KM(x,w),
+         na=,aalen=, nelson=.Sx.NA(x,w),
+         stop(paste("Method '", method, "'is not supported"))
+         )
+}
+
+## x <- c(10,7,32,23,22,6,16,34,32,25,11,20,19,6,17,35,6,13,9,6,10)
+## w <- c(1,1,0,1,1,1,1,0,0,0,0,0,0,1,0,0,1,1,0,0,0)
+
+.Sx.KM <- function(x,w){
+  x.censor <- w==0 # 0 censored, 1 events
+  x.events <- x[!x.censor]
+  n.events <- tapply(w[!x.censor], x.events, length)
+  t.events <- as.numeric(names(n.events))
+  n.events <- as.numeric(n.events)
+  n.atrisk <-   apply(as.matrix(t.events,ncol=1),1,.KM.count,y=x)
+  y <- cumprod(1-n.events/n.atrisk)
+  totMass <- 1-((rev(n.atrisk - n.events))[1])/length(x)
+  list(x=t.events,y=y,totMass=totMass,method="Kaplan-Meier")
+}
+
+.Sx.NA <- function(x,w){
+  x.censor <- w==0 # 0 censored, 1 events
+  x.events <- x[!x.censor]
+  n.events <- tapply(w[!x.censor], x.events, length)
+  t.events <- as.numeric(names(n.events))
+  n.events <- as.numeric(n.events)
+  n.atrisk <-   apply(as.matrix(t.events,ncol=1),1,.KM.count,y=x)
+  y <- cumsum(n.events/n.atrisk)
+  totMass <- 1-((rev(n.atrisk - n.events))[1])/length(x)
+  list(x=t.events,y=exp(-y),totMass=totMass,method="Nelson-Aalen")
+}
+
+.KM.count <- function(x,y) sum(y>=x)
 
 ## internal functions for weighted data.  Will be called only by wkde
 ## functions.  2012/10/31
 
-.wmean <- function(x){
-  if(class(x) != 'wtdata') stop("'x' not weighted")
+.wmean <- function(x,w){
+  if(class(x) != 'wtdata')# stop("'x' not weighted")
+    x <- .weighting(x,w)
   sum(x$x * x$w)
 }
 
-.wvar <- function(x){
-  if(class(x) != 'wtdata') stop("'x' not weighted")
-  sum((x$x-.wmean(x))^2 * x$w) * x$size/(x$size-1)
+.wvar <- function(x,w){
+#  if(class(x) != 'wtdata') stop("'x' not weighted")
+  if(class(x) != 'wtdata')# stop("'x' not weighted")
+    x <- .weighting(x,w)
+  sum((x$x-.wmean(x))^2 * x$w);
+  ##  sum((x$x-.wmean(x))^2 * x$w) * x$size/(x$size-1)
 }
 
-.wsd <- function(x){
-  if(class(x) != 'wtdata') stop("'x' not weighted")
+.wsd <- function(x,w){
+#  if(class(x) != 'wtdata') stop("'x' not weighted")
+  if(class(x) != 'wtdata')# stop("'x' not weighted")
+    x <- .weighting(x,w)
   sqrt(.wvar(x))
 }
 
 ## .wquantile should not be used to compute the quantiles with (very)
 ## low/high quantile levels, or for data with small sizes.
 
-.wquantile <- function(x,level){
-  if(class(x) != 'wtdata') stop("'x' not weighted")
+.wquantile <- function(x,w,level){
+#  if(class(x) != 'wtdata') stop("'x' not weighted")
+  if(class(x) != 'wtdata')# stop("'x' not weighted")
+    x <- .weighting(x,w)
   w <- x$w; x <- x$x; Fw <- cumsum(w)
   if(any(level<0|level>1)) stop("Invalid quantile level(s)")
   out = rep(0, length(level))
@@ -173,9 +355,22 @@ lprde <- function(x, w, bandwidth, nclass,  binwidth, lb, gridsize = 512L,
   out  
 }
 
-.wiqr <- function(x)
-  diff(.wquantile(x,level=c(.25,.75)))
-
+.wiqr <- function(x,w){
+  if(class(x) == 'wtdata')
+    out <- IQR(x$x)
+  else out <- IQR(x)
+  out
+#  if(class(x) != 'wtdata')# stop("'x' not weighted")
+#    x <- .weighting(x,w)
+#  w <- x$w; x <- x$x; Fw <- cumsum(w)
+#  level <- c(.25,.75)
+#  sele = level > min(Fw) & level < max(Fw)
+#  if(sum(sele)>0)
+#    out[sele] = approx(Fw,x,level[sele])$y
+#  if(sum(!sele)>0)
+#    out[!sele] = as.numeric(quantile(x,level[!sele], na.rm=TRUE))
+#  abs(diff(out))  
+}
 
   
 .lpreg <- function(x,y, x0, bandwidth, lscv=FALSE){
@@ -224,6 +419,18 @@ print.kde  <- function (x, digits = NULL, ...)
   invisible(x)
 }
 
+.bw.erd <- function(x)
+{
+  if(class(x) != 'wtdata')
+    x <- .weighting(x)
+  size <- x$size
+  if (size < 2L) 
+    stop("need at least 2 data points")
+  s <- ifelse(is.na(x$pars), .wmean(x), x$pars);
+  stopifnot(s>0)
+  iqr <- .wiqr(x);
+  0.9*min(s,iqr/1.34)*size^-.2
+}
 
 
 .bw.wnrd <- function(x)
@@ -310,25 +517,23 @@ print.kde  <- function (x, digits = NULL, ...)
          ), class = "edf")
 }
 
-.nwkde <- function(x,w, h, n, a,b, M, tau=4, truncate=FALSE)
+.fftwkde <- function(x,w, h, n, a,b, M, tau=4, truncate=FALSE)
 {
+  ## Compute kernel weights
+  delta  <- (b - a)/(h * (M-1L))
+  if (M == 0) warning("Binning grid too coarse!")
   gpoints <- seq(a, b, length = M)
   if(any(w>1)) w <- w/sum(w)
   binwidth <- (b-a)/(M-1)
   gcounts <- .wbin(x, w*n, a, binwidth, M, linbin = TRUE,
                    truncate=truncate)$gcounts
-  ## Compute kernel weights
-  delta  <- (b - a)/(h * (M-1L))
-  L <- min(floor(tau/delta), M)
-  if (L == 0) warning("Binning grid too coarse!")
-  
-  lvec <- 0L:L
+  lvec <- 0L:M
   kappa <- dnorm(lvec*delta)/(n*h)
   
   ## Now combine weight and counts to obtain estimate 
   ## we need P >= 2L+1L, M: L <= M.
-  P <- 2^(ceiling(log(M+L+1L)/log(2)))
-  kappa <- c(kappa, rep(0, P-2L*L-1L), rev(kappa[-1L]))
+  P <- 2^(ceiling(log(2L*M+1L)/log(2)))
+  kappa <- c(kappa, rep(0, P-2L*M-1L), rev(kappa[-1L]))
   tot <- sum(kappa) * (b-a)/(M-1L) * n # should have total weight one
   gcounts <- c(gcounts, rep(0L, P-M))
   kappa <- fft(kappa/tot)
@@ -370,3 +575,4 @@ bs.W.invlength <- function(x){
   if(any(x<=0)) stop("'x' must be positive")
   log(x)
 }
+

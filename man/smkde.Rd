@@ -25,6 +25,9 @@ smkde(x,f,bw,gridsize=512L,na.rm=TRUE,just="center",binned=FALSE, scale=1.0)
   \item{scale}{Numeric.  Default=1.0.}
 }
 \author{
+  B. Wang  \email{bwang@southalabama.edu}
+}
+\references{
  Blower, Gordon and Kelsall, Julia, (2002). 
  Nonlinear kernel density estimation for binned data: convergence in entropy. 
  \emph{Bernoulli}, 

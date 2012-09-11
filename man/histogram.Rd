@@ -32,7 +32,7 @@ Draw histogram based on data with rounding errors.
   cross validation score based binwidth selector will be used
   by default.  If the data is pre-binned, the histogram will be 
   constructed by using the relative frequencies in \code{weights},
-  or constructed using \link{table} if \code{weights} is missing.
+  or constructed using \code{table} if \code{weights} is missing.
 }
 \value{
   A class \code{hist} is returned, where a component \code{plot}
@@ -46,10 +46,10 @@ Draw histogram based on data with rounding errors.
 }
 
 \author{
-  B. Wang  \email{bwang@jaguar1.usouthal.edu}
+  B. Wang  \email{bwang@southalabama.edu}
 }
 \seealso{
- \code{\link{hist}}.
+ \code{\link{weighting}}.
 }
 \examples{
 
