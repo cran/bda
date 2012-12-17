@@ -66,7 +66,7 @@ static double rcllkweibull(int npar, double *pars, void *ex)
 {
 
   double *tmp= (double*)ex, res=0.0;
-  int i,j,n = (int)tmp[0]; //first element is the length of x;
+  int i,n = (int)tmp[0]; //first element is the length of x;
   double kappa = pars[0], lambda= pars[1]; 
   double x[n], w[n];
   

@@ -9,10 +9,11 @@ wkde.default <- function(x, w, bandwidth, freq=FALSE, gridsize = 512L,
                  range.x, truncate = TRUE, na.rm=TRUE,...)
 {
   if(!missing(bandwidth)&&is.character(bandwidth)){
-    bw <- match.arg(tolower(bandwidth),
-                    c('nrd', 'nrd0','lscv','mise','amise','erd','amae','mae'))
-    if(bw=='amae'||bw=='mae'){
-      out <- .wkde.mae(x,w,gridsize=gridsize)
+    bandwidth <- match.arg(tolower(bandwidth),
+                           c('nrd', 'nrd0','lscv','mise','amise',
+                             'erd','amae','mae'))
+    if(bandwidth=='amae'||bandwidth=='mae'){
+      out <- .wkde.mae(x,w,range.x,gridsize=gridsize)
     }else{
       x.wt <- .weighting(x,w,freq=freq,na.rm=na.rm)
       out <-   .wkde(x.wt=x.wt, bandwidth=bandwidth,gridsize=gridsize,
@@ -34,7 +35,7 @@ wkde.wtdata <- function(x, w, bandwidth, freq=FALSE, gridsize = 512L,
         range.x=range.x, truncate=truncate,...)
 }
 
-.wkde.mae <- function(x,w,gridsize=512L)
+.wkde.mae <- function(x,w,range.x,gridsize=512L)
   {
     if(any(x<0)) stop("Invalid lifetime data in 'x'")
     n <- length(x)
@@ -43,7 +44,8 @@ wkde.wtdata <- function(x, w, bandwidth, freq=FALSE, gridsize = 512L,
     if(length(w)!=n) stop("'x' and 'w' have different lengths")
     gridsize = max(512L, gridsize)  # make sure the grid is fine enough
     M <- 2^(ceiling(log2(gridsize)))
-    range.x <- c(min(x), max(x))
+    if (missing(range.x)) range.x <- c(min(x), max(x))
+    if(range.x[1L]<0) range.x[1L] <- 0.0  # life-time data analysis only
     a <- range.x[1L];  b <- range.x[2L]    
     ## Set up grid points and bin the data
     gpoints <- seq(a, b, length = M)
@@ -86,8 +88,8 @@ wkde.wtdata <- function(x, w, bandwidth, freq=FALSE, gridsize = 512L,
   pars = c(h0,0)  ## for adaptive bandwidth selector: awkde
 
   ## Install safeguard against non-positive bandwidths:
-  if(missing(bandwidth)) bandwidth <- "MISE"
-  else if(is.numeric(bandwidth)){
+  if(missing(bandwidth)) bandwidth <- "nrd0"
+  if(is.numeric(bandwidth)){
     stopifnot(bandwidth>0);
     h <- bandwidth;
   }
@@ -112,15 +114,12 @@ wkde.wtdata <- function(x, w, bandwidth, freq=FALSE, gridsize = 512L,
   if(bw=='mise'||bw=='amise'){
     bw <- h$bw[1]; sp <- h$bw[2]
     fx <- h$y
-  }else if(bw=='amae'){
-    bw <- NULL; sp <- NULL
-    fx <- h$y
   }else{
     bw <- h; sp <- NULL;
     out <- .fftwkde(x,w,h,n,a,b,M,tau=tau,truncate=truncate)
     fx <- out$y
   }
-
+  
   totMass <- sum(fx) *(b-a)/(M-1)
 
   out = structure(list(y=fx/totMass, x=gpoints, bw= bw, sp = sp,
@@ -338,7 +337,7 @@ weighting.default <- function(x,w,freq=FALSE,na.rm=TRUE,type,
 ## .wquantile should not be used to compute the quantiles with (very)
 ## low/high quantile levels, or for data with small sizes.
 
-.wquantile <- function(x,w,level){
+.rmwquantile <- function(x,w,level){
 #  if(class(x) != 'wtdata') stop("'x' not weighted")
   if(class(x) != 'wtdata')# stop("'x' not weighted")
     x <- .weighting(x,w)
@@ -355,21 +354,23 @@ weighting.default <- function(x,w,freq=FALSE,na.rm=TRUE,type,
   out  
 }
 
+.loqntl <- function(x,w){
+  ## x has been sorted
+  wcum <- cumsum(w)
+  n <- length(x)
+  stopifnot(length(w) == n)
+  l1 <- rev(which(wcum<=0.25))[1]
+  l2 <- which(wcum > 0.25)[1]
+  p1 <- 0.25 - wcum[l1]
+  x[l1] + p1 *(x[l1+1]-x[l1])
+}
+
 .wiqr <- function(x,w){
-  if(class(x) == 'wtdata')
-    out <- IQR(x$x)
-  else out <- IQR(x)
-  out
-#  if(class(x) != 'wtdata')# stop("'x' not weighted")
-#    x <- .weighting(x,w)
-#  w <- x$w; x <- x$x; Fw <- cumsum(w)
-#  level <- c(.25,.75)
-#  sele = level > min(Fw) & level < max(Fw)
-#  if(sum(sele)>0)
-#    out[sele] = approx(Fw,x,level[sele])$y
-#  if(sum(!sele)>0)
-#    out[!sele] = as.numeric(quantile(x,level[!sele], na.rm=TRUE))
-#  abs(diff(out))  
+  if(class(x) != 'wtdata') xwt <- .weighting(x,w)
+  else xwt <- x
+  q1 <- .loqntl(xwt$x,xwt$w)
+  q3 <- .loqntl(rev(xwt$x),rev(xwt$w))
+  q3 - q1
 }
 
   

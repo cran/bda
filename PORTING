@@ -18,8 +18,18 @@ bda_2.0.11-4:
   (3) to update keywords in the Rd files.
   (4) to add bandwidth selector 'erd'
   (5) add an bandwidth option for 'aMAE' or 'MAE'.
-2012/12/10:
+
+2012/11/10:
   (1) fixed a bug of different length in .fftkde
   (2) fixed a bug in computing WIQR
   (3) add to binning an option such that if binwidth is given
       but 'lb' is missing, we set lb = min(x)-binwidth/2.
+
+2012/11/14:
+  (1) remove startup message
+  (2) rewrite qiwr function
+  (3) fix a bug in wkde --> "bw"/"bandwidth"
+  (4) remove "amae" from .wkde
+
+2012/11/19:
+  (1) add range to "mae" and make sure the lower limit is non-negative
