@@ -163,3 +163,53 @@ void wkdemae(double *x,double *w,int *size,double *y,int *ny)
   }
 
 }
+
+/*  binned data analysis*/
+
+static double bdcdf(int npar, double *pars, void *ex)
+/* loglikelihood function to be called by the Nelder-Mead simplex
+method */
+{
+
+  double *tmp= (double*)ex, res=0.0;
+  int i,n = (int)tmp[0]; //first element is the length of x;
+  double kappa = pars[1], lambda= pars[0]; 
+  double f[n], a[n], b[n], llk1,llk2;
+  
+  for(i=0;i<n;i++) {//restore auxiliary information from ex;
+    f[i] = tmp[i+1]; 
+    a[i] = tmp[i+n+1]; 
+    b[i] = tmp[i+2*n+1]; 
+  }
+  llk1 = exp(-pow(a[0]/lambda, kappa));
+  for(i=0;i<n;i++) {
+    llk2 = exp(-pow(b[0]/lambda, kappa));
+    res += f[i]*log(llk1-llk2);
+    llk1 = llk2;
+  }
+  return(-res);
+}
+
+void BDMLE(double *f,double *a,double *b,int *nbin,
+	   double *pars, int *npars, int *dist)
+{
+  int i,nx=nbin[0],npar=2; //2-parameter distribution only
+  double dpar[npar],opar[npar]; 
+  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
+  double abstol=0.00000000001,reltol=0.0000000000001,val;
+  int ifail=0,trace=0, maxit=1000, fncount;
+  double alpha=1.0, beta=0.5, gamma=2;
+  double yaux[3*nx+1];
+  yaux[0] = nx; //sample size
+  for(i=0;i<nx;i++){
+    yaux[i+1] = f[i];
+    yaux[i+nx+1] = a[i];
+    yaux[i+2*nx+1] = b[i];
+  }
+
+  if(dist[0]==0) npars[0] = 2;  //reserved for later
+
+  nmmin(npar,dpar,opar,&val,rcllkweibull,&ifail,abstol,reltol, 
+	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
+  pars[0] = opar[0]; pars[1] = opar[1];
+}

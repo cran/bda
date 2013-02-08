@@ -14,6 +14,8 @@ void GridBinning(double *x, double *w, int *nx, double *xlo, double *bw,
 		 int *ngrid, int *trun, int *linbin, double *gcnts);
 void wkdemae(double *x,double *w,int *size,double *y,int *ny);
 void RcMleWeibull(double *x,double *w,int *size,double *pars);
+void BDMLE(double *f, double *a, double *b, int *nbin,
+	   double *pars, int *npar, int *dist);
 
 
 //  cbootkde.c/fbootkde.f
@@ -76,6 +78,7 @@ static const R_FortranMethodDef FortEntries[] = {
   {"GridBinning", (DL_FUNC) & GridBinning, 9},
   {"wkdemae", (DL_FUNC) & wkdemae, 5},
   {"RcMleWeibull", (DL_FUNC) & RcMleWeibull, 4},
+  {"BDMLE", (DL_FUNC) & BDMLE, 7},
   //codes above this line have been double-checked
   {"kspvalue", (DL_FUNC) & kspvalue, 1},
   {"wmise", (DL_FUNC) & wmise, 6},

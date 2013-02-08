@@ -1,8 +1,9 @@
-a1db653ef1fece6495d4c648e6efa7aa *DESCRIPTION
+28b8ac93285503096db841cbabf54472 *DESCRIPTION
 d008ac6798fdfeba4fb80de7176f68c3 *LICENCE
 5143c5cc17df9b1221dcef0709495c76 *NAMESPACE
 7da79090df8d246b2f44ff332fb6c106 *PORTING
-583e6db5ba45afe079461ef859706cd3 *R/bkde.R
+e6661d806e7d3a5c8f9b3c596620a059 *R/binDE.R
+583e6db5ba45afe079461ef859706cd3 *R/bootKDE.R
 95053d8c85207d7959ea773cae3b0acf *R/histogram.R
 ee8eb3ede54250d9e3d77bad7733717f *R/mixedmodel.R
 508a41f9bedeece8dac19ece75d8350d *R/mle.R
@@ -15,6 +16,7 @@ ba74d92b22996d026aaed3435af1c2ba *arc/v1.2.7-31
 18c49cf562526d10b67ba5289c8c248b *data/zr.tab.gz
 66b2474d4ea35140cf304c1d0dc26282 *man/BiasedSampling.Rd
 ffc668ab09ac76e2bbe2f911419c93ab *man/MLE.Rd
+db481f686dad27cbb579f5c4c3d70cb1 *man/bdde.Rd
 85a1def9db1d4fff840406cb858e7d43 *man/bdfmm.Rd
 c6ba64f55fcc2f2c88189f4c1e3af1e6 *man/bootkde.Rd
 9fc739767add4a6db1458a292423a901 *man/edf.Rd
@@ -31,7 +33,7 @@ f03687dbf56a900cb8d6355a9d0904b1 *man/smkde.Rd
 4acaf55479e41917dd0b579fbb6f6225 *man/wkde.rd
 15da72cfe3fe68498c4563dbc3433ad1 *man/zr.Rd
 5131d8cd95d48c6b794aae394cda5f7d *src/DeconKernel.c
-4c3b1273ee601bf84547a9c6455bb87e *src/KernelWKDE.c
+ddee10da8bf7f6daf04f27f418135c70 *src/KernelWKDE.c
 64d50159e30c567db033bbd9737dc7b0 *src/LLSKernel.c
 6eb2387475cc5678aa65eb12800e5181 *src/Makevars
 b3ff32f2db5855a64b9579b42484d201 *src/bootkdec.c
@@ -40,4 +42,4 @@ e957f75b6bad8f6c2e1febf62caffb7a *src/cwkde.c
 f881bda0a9bdee6d01deb924334887b7 *src/fftdens.f
 f808220657105a35f08bdc575c853104 *src/fmmc.c
 6b226b9356a117cdd382bf0ef060558c *src/fmmf.f
-32216c083a7eee85dbfeaa1b818107d0 *src/init.c
+ead6fa2effafe3353d3ec230ae79c064 *src/init.c
