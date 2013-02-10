@@ -11,7 +11,7 @@ Returns x and y coordinates of the density estimate of
 the probability density based on binned data.  
 }
 \usage{
- bdde(f, breaks, dist="normal",gridsize=512L,...)
+ bdde(f, breaks, dist="ewd",gridsize=512L,iter=100,...)
 }
 \arguments{
 \item{f}{
@@ -20,6 +20,9 @@ the probability density based on binned data.
 }
 \item{breaks}{
  vector of breaking points.
+}
+\item{iter}{
+ iteration for model fitting.
 }
 \item{gridsize}{
 the number of equally spaced points at which to estimate
@@ -48,9 +51,16 @@ at the corresponding \code{x}.
 }
 
 \details{
- A Weibull distribution is fitted to the a set of 
+ A specific family of distribution is fitted to the a set of 
  non-negative data that have binned.  
  Missing values are not allowed.
+ Families of distributions supported include: 
+   'ewd' -- exponentiated Weibull distribution;
+   'weibull' -- Weibull distribution;
+   'gb' -- generalized beta distribution,
+   'dagum'.
+ Other ditributions being developed include 'gld', 'normal',
+   'gamma', 'beta'.
 
 }
 
@@ -62,22 +72,28 @@ at the corresponding \code{x}.
 Wang, B.  (2013?). A manuscript is in preparation.
 }
 
-\examples{
+\examples{ 
 
- x <- rnorm(1000, 34.5,1.5)
- y <- round(x)
- tmp <- table(y)
+## Mobile 2010 Household income
+## (http://www.clrsearch.com/Mobile-Demographics/AL/Household-Income)
+##  reported mean $61291, median $42574.  
 
- f <- as.numeric(tmp)
- tmp2 <- as.numeric(names(tmp))
- breaks <- c(tmp2[1]-0.5, tmp2+0.5)
+ breaks <- c(0,15000,25000,35000,50000,75000,100000,125000,150000,200000,Inf)
+ x <- c(15783,9748,9150,11512,13609,9422,4861,2565,1843,2495)
 
- (out3 <- bdde(f,breaks))
- hist(out3)
- lines(out3, col=2, lwd=2)
- x0 <- seq(min(x), max(x), length=100)
- f0 <- dnorm(x0, 34.5, 1.5)
- lines(f0~x0, col=4, lty=2)
+## par(mfrow=c(2,2))
+ (out1 <- bdde(x,breaks, dist='gb'))
+## (out2 <- bdde(x,breaks, dist='weibull'))
+## (out3 <- bdde(x,breaks, dist='ewd'))
+## (out4 <- bdde(x,breaks, dist='dagum'))
+ hist(out1,iter=10)
+ lines(out1, col=2, lwd=2)
+## hist(out2)
+## lines(out2, col=2, lwd=2)
+## hist(out3)
+## lines(out3, col=2, lwd=2)
+## hist(out4)
+## lines(out4, col=2, lwd=2)
 
 }
 \keyword{model}

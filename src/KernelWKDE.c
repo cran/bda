@@ -175,19 +175,29 @@ method */
   int i,n = (int)tmp[0]; //first element is the length of x;
   double kappa = pars[1], lambda= pars[0]; 
   double f[n], a[n], b[n], llk1,llk2;
-  
-  for(i=0;i<n;i++) {//restore auxiliary information from ex;
-    f[i] = tmp[i+1]; 
-    a[i] = tmp[i+n+1]; 
-    b[i] = tmp[i+2*n+1]; 
+
+  if(lambda > 0.0 && kappa > 0.0){
+    res = 0.0;
+    for(i=0;i<n;i++) {//restore auxiliary information from ex;
+      f[i] = tmp[i+1]; 
+      a[i] = tmp[i+n+1]; 
+      b[i] = tmp[i+2*n+1]; 
+    }
+    llk1 = exp(-pow(a[0]/lambda, kappa));
+    for(i=0;i<n;i++) {
+      if(finite(b[i])) {
+	llk2 = exp(-pow(b[i]/lambda, kappa));
+      }else{ 
+	llk2 = 0.0;
+      }
+      res += f[i]*log(llk1-llk2);
+      llk1 = llk2;
+    }
+    res = -res;
+  }else{
+    res = 999999999999.99;
   }
-  llk1 = exp(-pow(a[0]/lambda, kappa));
-  for(i=0;i<n;i++) {
-    llk2 = exp(-pow(b[0]/lambda, kappa));
-    res += f[i]*log(llk1-llk2);
-    llk1 = llk2;
-  }
-  return(-res);
+  return(res);
 }
 
 void BDMLE(double *f,double *a,double *b,int *nbin,

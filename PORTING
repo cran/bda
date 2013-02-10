@@ -33,3 +33,9 @@ bda_2.0.11-4:
 
 2012/11/19:
   (1) add range to "mae" and make sure the lower limit is non-negative
+
+2013/02/08:
+  (1) add 'bdde' function to estimate from data that are prebinned --
+	divided in to several groups (intervals).
+  (2) add two more distribution families other than "weibull" -- 
+	ewd and datum. 
