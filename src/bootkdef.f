@@ -78,9 +78,9 @@ cccccccccc FORTRAN subroutine remp.f cccccccccc
 c     To draw a random sample from a kernel estimate of a distribution
 c     Last changed: 18 Oct 2010
 
-      subroutine remp(ny,y,f,a,b,nx,Fx,x,u)
-      integer ny,nx,i,j,k,l,icounter
-      double precision y(ny),f(ny),a(ny),b(ny),x(nx),Fx(nx),u(ny),
+      subroutine remp(ny,y,f,a,b,nx,Fx,x,u,n)
+      integer n,ny,nx,i,j,k,l,icounter
+      double precision y(ny),f(ny),a(ny),b(ny),x(nx),Fx(nx),u(n),
      *     F0,F1,y0,dy,t1
 
       icounter=0

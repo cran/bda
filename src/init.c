@@ -23,7 +23,7 @@ void hbmise(double *x, double *f, double *h, int *n, double *hopt);
 void F77_SUB(ofcpdf)(double *y, double *f,double *a, double *b,
 		     int *ny, double *x, int *nx, double *bw);
 void F77_SUB(remp)(int *n,double *y,double *f, double *a, double *b,
-		   int *m, double *Fx, double *x, double *u);
+		   int *m, double *Fx, double *x, double *u, int *ntotal);
 
 // cwkde.c or fwkde.f =======================================
 void awkde(double *y, double *w, int *n, double *x,double *fx, 
@@ -101,7 +101,7 @@ static const R_FortranMethodDef FortEntries[] = {
   {"rlbin",  (DL_FUNC) &F77_SUB(rlbin),   9},
   {"hbmise", (DL_FUNC) & hbmise, 5},
   {"ofcpdf", (DL_FUNC) &F77_SUB(ofcpdf), 8},
-  {"remp", (DL_FUNC) &F77_SUB(remp), 9},
+  {"remp", (DL_FUNC) &F77_SUB(remp), 10},
   {NULL, NULL, 0}
 };
 

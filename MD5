@@ -1,9 +1,8 @@
-00cc1f3bb60d191b2d526a2f40387684 *DESCRIPTION
-d008ac6798fdfeba4fb80de7176f68c3 *LICENCE
+01064b839c4c98085c17eed960076a5f *DESCRIPTION
 5143c5cc17df9b1221dcef0709495c76 *NAMESPACE
 4106dbb66dd617ab0fc8d805e7080aad *PORTING
 5cbe64472e6c679d63f4e2e8fb7bf048 *R/binDE.R
-583e6db5ba45afe079461ef859706cd3 *R/bootKDE.R
+ead3eecfd07492f7fe8974ba4199965f *R/bootKDE.R
 95053d8c85207d7959ea773cae3b0acf *R/histogram.R
 ee8eb3ede54250d9e3d77bad7733717f *R/mixedmodel.R
 508a41f9bedeece8dac19ece75d8350d *R/mle.R
@@ -37,9 +36,9 @@ f03687dbf56a900cb8d6355a9d0904b1 *man/smkde.Rd
 64d50159e30c567db033bbd9737dc7b0 *src/LLSKernel.c
 6eb2387475cc5678aa65eb12800e5181 *src/Makevars
 b3ff32f2db5855a64b9579b42484d201 *src/bootkdec.c
-bbdc477f2fe926ceec04e87c24c07b98 *src/bootkdef.f
+e4d746e0d580331158d2def5cd5da7f0 *src/bootkdef.f
 e957f75b6bad8f6c2e1febf62caffb7a *src/cwkde.c
 f881bda0a9bdee6d01deb924334887b7 *src/fftdens.f
 f808220657105a35f08bdc575c853104 *src/fmmc.c
 6b226b9356a117cdd382bf0ef060558c *src/fmmf.f
-ead6fa2effafe3353d3ec230ae79c064 *src/init.c
+73c2299bf2ee9620ba5b3c321d689d0a *src/init.c
