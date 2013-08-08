@@ -1,7 +1,5 @@
-\name{bdde}
-\alias{bdde}
-\alias{print.bindata}
-\alias{hist.bindata}
+\name{bde}
+\alias{bde}
 \encoding{UTF-8}
 \title{
   Density Estimation for Binned Data
@@ -11,7 +9,7 @@ Returns x and y coordinates of the density estimate of
 the probability density based on binned data.  
 }
 \usage{
- bdde(f, breaks, dist="ewd",gridsize=512L,iter=100,...)
+ bde(f, breaks, dist="ewd",gridsize=512L,iter=100,...)
 }
 \arguments{
 \item{f}{
@@ -82,11 +80,11 @@ Wang, B.  (2013?). A manuscript is in preparation.
  x <- c(15783,9748,9150,11512,13609,9422,4861,2565,1843,2495)
 
 ## par(mfrow=c(2,2))
- (out1 <- bdde(x,breaks, dist='gb'))
-## (out2 <- bdde(x,breaks, dist='weibull'))
-## (out3 <- bdde(x,breaks, dist='ewd'))
-## (out4 <- bdde(x,breaks, dist='dagum'))
- hist(out1,iter=10)
+ (out1 <- bde(x,breaks, dist='gb'))
+## (out2 <- bde(x,breaks, dist='weibull'))
+## (out3 <- bde(x,breaks, dist='ewd'))
+## (out4 <- bde(x,breaks, dist='dagum'))
+ hist(out1)
  lines(out1, col=2, lwd=2)
 ## hist(out2)
 ## lines(out2, col=2, lwd=2)

@@ -1,6 +1,6 @@
 Package: bda
-Version: 2.1.4-19
-Date: 2013-4-19
+Version: 2.2.8-8
+Date: 2013-8-8
 Title: Density Estimation for Binned/Weighted Data
 Author: Bin Wang <bwang@southalabama.edu>.
 Maintainer: Bin Wang <bwang@southalabama.edu>
@@ -8,7 +8,7 @@ Depends: R (>= 2.10.0), stats
 Description: This package collects algorithms/functions developed for
         density estimation based on weighted or pre-binned data.
 License: Unlimited
-Packaged: 2013-04-19 18:49:13 UTC; bwang
+Packaged: 2013-08-08 16:47:56 UTC; bwang
 Repository: CRAN
-Date/Publication: 2013-04-20 07:42:15
+Date/Publication: 2013-08-08 19:46:44
 NeedsCompilation: yes

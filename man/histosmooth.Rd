@@ -1,19 +1,23 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{edf}
-\alias{edf}
-\alias{edf.bdata}
-\alias{edf.default}
-\alias{print.edf}
-\alias{plot.edf}
-\alias{lines.edf}
-\title{To compute the empirical distribution function.}
+\name{histosmooth}
+\alias{histosmooth}
+\alias{histosmooth.default}
+\alias{histosmooth.histogram}
+\alias{print.smooth}
+\alias{plot.smooth}
+\alias{hist.smooth}
+
+\title{Smooth A Histogram}
+
 \description{
-To compute the empirical distribution function.}
+ To fit a smooth curve to a histogram with equal bin widths.
+}
+
 \usage{
-  edf(x, weights, freq, from, to, gridsize, digits=0,
-                rounding)
+ histosmooth(x, weights, freq, type='spline', bw,
+             from, to, gridsize, digits=0, rounding)
 }
 \arguments{
   \item{x}{A sample. 'NA' values will be automatically removed.}
@@ -27,18 +31,35 @@ To compute the empirical distribution function.}
   \code{digits = -2} rounds to the nearest hundred.}
   \item{rounding}{Rounding method.  Options include \code{nearest}, 
   \code{up}, \code{down}, or \code{none}.}
+  \item{type}{Smoothing type: \code{spline}, \code{kde}, or 
+  \code{lp}/\code{localpolynomial}.}
+  \item{bw}{Smoothing parameter.  Numeric or character value is 
+  allowed.  If missing, adaptive (LSCV) bandwidth selector will 
+  be used.}
 }
+
 \author{
   B. Wang  \email{bwang@southalabama.edu}
 }
 
 \examples{
 
-x = c(1:10)
-(out = edf(x))
-plot(out,ylim=c(0,1))
-(out2 = edf(x, gridsize=15))
+par(mfrow=c(2,2))
+x0 <- rnorm(1000,34.5,1.5)
+hist(x0)
+x <- round(x0)
+(out1 <- histogram(x, rounding='nearest',digits=0))
+out2 <- histosmooth(out1)
+plot(out1)
 lines(out2, col=2)
+
+out3 <- histosmooth(out1, type='lp')
+plot(out1)
+lines(out3, col=2)
+
+out4 <- histosmooth(out1, type='kde')
+plot(out1)
+lines(out4, col=2)
 
 }
 \keyword{distribution}

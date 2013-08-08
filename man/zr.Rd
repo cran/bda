@@ -1,6 +1,8 @@
 \name{zr}
 \docType{data}
 \alias{zr}
+\alias{print.BD}
+
 \usage{data(zr)}
 \title{occipitofrontal head circumference data}
 \description{
@@ -21,12 +23,7 @@ OFC data for singleton live births with gestational age at least 38 weeks in cit
 }
 
 \examples{
-
  data(zr)
- male = zr$Sex=="male"
- zar = zr$Region=="Zarichne"
-
- out1 = bootkde(zr$Head[male&zar])
-
+ zr
 }
 \keyword{datasets}

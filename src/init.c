@@ -9,6 +9,35 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
+// Ckernel.c
+void weibullmae(double *x,double *w,int *size,
+		double *pars, double *y,int *ny);
+void expmae(double *x,double *w,int *size,double *y,int *ny);
+
+void tubecv(double *kappa, double *level);
+
+void lpsmooth(double *xgrid, int *ngrid, double *x, double *y, 
+	      int *size, double *bw, int *lscv, 
+	      double *range, int *adaptive, double *ellx, 
+	      double *kappa);
+void WeibullMleNMMIN(double *x, double *w, int *nx, double *pars);
+void lpshazard(double *xgrid, double *vx, int *ngrid, 
+	       double *x, double *y, double *v, 
+	       int *size, double *bw, int *lscv, int *ikernel);
+
+// Fkernel.f
+
+void F77_SUB(binning)(double *X, double *F, double *W, double *A, 
+		      double *B, int *n, double *xa, double *xb, 
+		      int *M, double *gcnts, int *type);
+void F77_SUB(yldist)(double *gcounts, int *m, double *y);
+void F77_SUB(smoothkde)(double *fx, double x0, int *n, 
+			double *x,  double *f, int m,
+			double *w, double *h, int *iter);
+
+		    /*  codes below this line need to be double checked
+		     */
+
 //  KernelWKDE.c  
 void GridBinning(double *x, double *w, int *nx, double *xlo, double *bw,
 		 int *ngrid, int *trun, int *linbin, double *gcnts);
@@ -51,7 +80,6 @@ void F77_SUB(wedf)(double *x, double *w, int *n,
 		   double *xgrid, double *fhat, int *m);
 		  */
 
-void F77_SUB(yldist)(double *gcounts, int *m, double *y);
 
 // cfmm.c or ffmm.f =======================================
 
@@ -75,6 +103,16 @@ void kspvalue(double *x0);
 
 		 
 static const R_FortranMethodDef FortEntries[] = {
+  {"binning", (DL_FUNC) &F77_SUB(binning),  11},
+  {"yldist", (DL_FUNC) &F77_SUB(yldist),  3},
+  {"smoothkde", (DL_FUNC) &F77_SUB(smoothkde),  9},
+  {"tubecv", (DL_FUNC) & tubecv, 2},
+  {"lpsmooth", (DL_FUNC) & lpsmooth, 11},
+  {"lpshazard", (DL_FUNC) & lpshazard, 10},
+  {"WeibullMleNMMIN", (DL_FUNC) & WeibullMleNMMIN, 4},
+  {"weibullmae", (DL_FUNC) & weibullmae, 6},
+  {"expmae", (DL_FUNC) & expmae, 5},
+  //subroutines below this line need to be double checked.
   {"GridBinning", (DL_FUNC) & GridBinning, 9},
   {"wkdemae", (DL_FUNC) & wkdemae, 5},
   {"RcMleWeibull", (DL_FUNC) & RcMleWeibull, 4},
@@ -88,7 +126,6 @@ static const R_FortranMethodDef FortEntries[] = {
   {"wlbcounts", (DL_FUNC) &F77_SUB(wlinbin),  8},
   {"wbin", (DL_FUNC) &F77_SUB(wlinbin),  8},
   {"wedf", (DL_FUNC) &F77_SUB(wedf),  6},*/
-  {"yldist", (DL_FUNC) &F77_SUB(yldist),  3},
   {"llrGauss", (DL_FUNC) & llrGauss, 7},
   {"fitmm", (DL_FUNC) & fitmm, 8},
   {"FitGamma", (DL_FUNC) & FitGamma, 3},

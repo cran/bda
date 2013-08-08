@@ -107,7 +107,7 @@ void RcMleWeibull(double *x,double *w,int *size,double *pars)
  * Call: rcple(x,y,n[0],...);
  *
  */
-void rcple(double x[], double w[], int n, double y[], double h[], int m) 
+void myrcple(double x[], double w[], int n, double y[], double h[], int m) 
 {
   int i,j;
   double xprod=1.0;
@@ -140,8 +140,8 @@ void wkdemae(double *x,double *w,int *size,double *y,int *ny)
     delta  += w[i];
   }
   lambda /= delta; //mle of lambda
-  rcple(x,w,n,y,Hx,m);
-  rcple(x,w,n,x,HX,n);
+  myrcple(x,w,n,y,Hx,m);
+  myrcple(x,w,n,x,HX,n);
   double t1,t2;
   t1 = 0.7644174 * lambda * pow(n,-.2);
   t2 = 0.2/lambda;

@@ -2,6 +2,7 @@
 \alias{lprde}
 \alias{print.nprde}
 \alias{plot.nprde}
+\alias{print.kde}
 \encoding{UTF-8}
 \title{
  Density Estimation for Weighted Data via Non-parametric Regression
@@ -90,9 +91,7 @@ at the corresponding \code{x}.
   Wang, B. and Wang, X-F. (2012). To be updated. 
   "Weighted Kernel Density Estimation". JMBMS.
 }
-\seealso{
-  \code{\link{wkde}}.
-}
+
 \examples{
 
  mu = 34.5; s=2.5; n = 10000
@@ -105,8 +104,6 @@ at the corresponding \code{x}.
  w1 = as.numeric(xt)
  
  est1 <- lprde(x1,w1,lb=round(min(x))-0.5,binwidth=1,freq=TRUE)
- est3 <- wkde(x1,w1, bandwidth='amise')
- est4 <- wkde(x1,w1, bandwidth='mise')
 
  est0 <- density(x1,bw="SJ",weights=w1/sum(w1)); 
 
@@ -115,13 +112,11 @@ at the corresponding \code{x}.
  lines(est0, col=1, lty=2, lwd=2)
 
  lines(est1, col=2)
- lines(est3, col=4)
- lines(est4, col=5)
  legend(max(x),ymax,xjust=1,yjust=1,cex=.8,
-  legend=c("N(34.5,1.5)", "SJ", "lprde(x,w)","awmise","wmise"),
-  col = c(1,1,2,4,5), 
-  lty = c(1,2,1,1,1),
-  lwd = c(1,2,1,1,1))
+  legend=c("N(34.5,1.5)", "SJ", "lprde(x,w)"),
+  col = c(1,1,2), 
+  lty = c(1,2,1),
+  lwd = c(1,2,1))
 
 }
 \keyword{smooth}

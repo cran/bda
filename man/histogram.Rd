@@ -3,62 +3,46 @@
 
 \name{histogram}
 \alias{histogram}
-\alias{print.hist}
-\alias{plot.hist}
-\alias{lines.hist}
-
-\title{Draw histogram based on data with rounding errors}
+\alias{histogram.default}
+\alias{histogram.bdata}
+\alias{print.histogram}
+\alias{plot.histogram}
+\alias{lines.histogram}
+\title{Histogram}
 \description{
-Draw histogram based on data with rounding errors.
-}
+ To construct histogram based on pre-binned or raw data.}
 \usage{
-  histogram(x, w, nclass, binwidth, lb,
-      range.x, freq=FALSE, truncate = TRUE)
+ histogram(x, weights, freq, from, to, nclass, digits=0, rounding)
 }
 \arguments{
-  \item{x}{a numeric value or a vector.}
-  \item{w}{A vector of weights for the values of \code{x}}
-  \item{nclass}{Number of classes}
-  \item{binwidth}{bin width.}
-  \item{lb}{Lower bound of the first bin.}
-  \item{range.x}{The range of \code{x} where 
-    the histogram will be constructed.}
-  \item{freq}{Whether \code{w} (if given) are frequencies.}
-  \item{truncate}{Whether or not to truncate the data fall
-    beyond the \code{range.x}.}
+  \item{x}{A sample. 'NA' values will be automatically removed.}
+  \item{weights}{A vector of weights of \code{x}}
+  \item{freq}{A vector of frequencies of \code{x}}
+  \item{from,to}{start point, end point of the data.}
+  \item{nclass}{Number of classes.}
+  \item{digits}{integer indicating the number of decimal places that 
+  \code{x} will be rounded to.  Negative values are allowed. A negative 
+  number of digits means rounding to a power of ten, so for example 
+  \code{digits = -2} rounds to the nearest hundred.}
+  \item{rounding}{Rounding method.  Options include \code{nearest}, 
+  \code{up}, \code{down}, or \code{none}.}
 }
-\details{
-  If \code{nclass} is missing and the data are not prebinned, the 
-  cross validation score based binwidth selector will be used
-  by default.  If the data is pre-binned, the histogram will be 
-  constructed by using the relative frequencies in \code{weights},
-  or constructed using \code{table} if \code{weights} is missing.
-}
-\value{
-  A class \code{hist} is returned, where a component \code{plot}
-  is an R object "histogram" for visualization.
-}
-\references{
-  Wang, B. and Wertelecki, W. (2012) 
-  Density Estimation for Data With Rounding Errors.
-  \emph{Computational Statistics and Data Analysis}, 
-  (in press), doi: 10.1016/j.csda.2012.02.016. 
-}
-
 \author{
   B. Wang  \email{bwang@southalabama.edu}
 }
-\seealso{
- \code{\link{weighting}}.
-}
+
 \examples{
 
- ofc = round(rnorm(1000,34.5,1.5))
- (out = histogram(ofc,lb=min(ofc)-0.5, binwidth=1))
- plot(out)
- x0 = seq(28,42, length=100)
- lines(dnorm(x0,34.5,1.5)~x0, col=2)
+x0 <- rnorm(1000,34.5,1.5)
+x <- round(x0)
+(out1 <- histogram(x, rounding='nearest',digits=0))
+(out2 <- histogram(x0))
+par(mfrow=c(2,2))
+hist(x0)
+plot(out1)
+plot(out2)
 
 }
-\keyword{smooth}
+\keyword{distribution}
+\keyword{stats}
 

@@ -37,11 +37,6 @@ To compute the pointwise confidence bands.}
 x = rnorm(30, 34.5, 1.5)
 pcb(x)
 
-(out = edf(x))
-plot(out)
-(out2= pcb(out))
-lines(out2, col=2)
-
 
 }
 \keyword{stats}

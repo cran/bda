@@ -1,0 +1,8 @@
+2013/04/19: based on bda 2.1.4-19, double check all codes and merge duplicated algorithm.
+
+data:zr		help/print 
+perm.test	permutation test
+mediation.test	Mediation test
+edf		Empirical distribution function
+histogram	Histogram
+histosmooth	Fit a smooth curve to a histogram

@@ -1,11 +1,10 @@
 \name{wkde}
 \alias{wkde}
 \alias{wkde.default}
-\alias{wkde.wtdata}
-\alias{print.kde}
+\alias{wkde.bdata}
 \encoding{UTF-8}
 \title{
-Compute a Binned Kernel Density Estimate for Weighted Data
+ Compute a Binned Kernel Density Estimate for Weighted Data
 }
 \description{
 Returns x and y coordinates of the binned
@@ -13,51 +12,30 @@ kernel density estimate of the probability
 density of the weighted data.  
 }
 \usage{
- wkde(x, w, bandwidth, freq=FALSE, gridsize = 512L, range.x, 
- 	 truncate = TRUE, na.rm = TRUE,...)
+ wkde(x, weights, freq, bw, from, to, gridsize, digits=0,
+     rounding)
 }
 \arguments{
-\item{x}{
-  vector of observations from the distribution whose density is to
-  be estimated.  Missing values are not allowed.
-}
-\item{w}{
- The weights of \code{x}.  The weight \code{w_i} of any 
- observation \code{x_i} should
- be non-negative.  If \code{x_i=0}, \code{x_i} will be removed
- from the analysis.
-}
-\item{bandwidth}{
-  the kernel bandwidth smoothing parameter.  Larger values of
-  \code{bandwidth} make smoother estimates, smaller values of
-  \code{bandwidth} make less smooth estimates.  Automatic bandwidth 
-  selectors are developed.  Options include \code{nrd}, \code{nrd0},
-  \code{erd}, \code{aMAE}
-  \code{LSCV}, \code{MISE}, and \code{aMISE}.
-}
-\item{freq}{
-  An indicator showing whether \code{w} is a vector of frequecies
-  (counts) or weights.
-}
-\item{gridsize}{
-the number of equally spaced points at which to estimate
-the density.
-}
-\item{range.x}{
-vector containing the minimum and maximum values of \code{x}
-at which to compute the estimate.
-The default is the minimum and maximum data values, extended by the
-support of the kernel.
-}
-\item{truncate}{
-logical flag: if \code{TRUE}, data with \code{x} values outside the
-range specified by \code{range.x} are ignored.
-}
-\item{na.rm}{
-logical flag: if \code{TRUE}, \code{NA} values will be ignored; 
-otherwise, the program will be halted with error information.
-}
-\item{...}{controls}
+  \item{x}{A sample. 'NA' values will be automatically removed.}
+
+  \item{weights}{A vector of weights of \code{x}}
+
+  \item{freq}{A vector of frequencies of \code{x}}
+
+  \item{from,to,gridsize}{start point, end point and size of a fine 
+  grid where the EDF will be evaluated.}
+
+  \item{digits}{integer indicating the number of decimal places that 
+  \code{x} will be rounded to.  Negative values are allowed. A negative 
+  number of digits means rounding to a power of ten, so for example 
+  \code{digits = -2} rounds to the nearest hundred.}
+
+  \item{rounding}{Rounding method.  Options include \code{nearest}, 
+  \code{up}, \code{down}, or \code{none}.}
+
+  \item{bw}{Smoothing parameter.  Numeric or character value is 
+  allowed.  If missing, \code{mise} -- LSCV bandwidth selector will 
+  be used.}
 }
 \value{
 a list containing the following components:
@@ -71,11 +49,9 @@ at the corresponding \code{x}.
 }
 \item{bw}{
   optimal bandwidth.
-}
-\item{sp}{
   sensitivity parameter, none \code{NA} if adaptive 
   bandwidth selector is used.
-}
+  }
 }
 
 \details{
@@ -134,12 +110,10 @@ data based on asymptotic mean absolute error".
 30, 4375-4384.
 
 }
-\seealso{
-  \code{\link{lprde}}.
-}
+
 \examples{
 
- mu = 34.5; s=2.5; n = 10000
+ mu = 34.5; s=2.5; n = 1000
  x = round(rnorm(n, mu, s),1)
  x0 = seq(min(x)-s,max(x)+s, length=100)
  f0 = dnorm(x0,mu, s);  ymax <- max(f0*1.2)
@@ -148,12 +122,12 @@ data based on asymptotic mean absolute error".
  x1 = as.numeric(names(xt))
  w1 = as.numeric(xt)
  
- est1 <- wkde(x1,w1, bandwidth='nrd0',freq=TRUE)
- est2 <- wkde(x1,w1, bandwidth='nrd',freq=TRUE)
- est3 <- wkde(x1,w1, bandwidth='amise',freq=TRUE)
- est4 <- wkde(x1,w1, bandwidth='mise',freq=TRUE)
- est5 <- wkde(x1,w1, bandwidth='lscv',freq=TRUE)
- est6 <- wkde(x, bandwidth='lscv')
+ est1 <- wkde(x1,freq=w1, bw='nrd0')
+ est2 <- wkde(x1,freq=w1, bw='nrd')
+ est3 <- wkde(x1,freq=w1, bw='amise')
+ est4 <- wkde(x1,freq=w1, bw='mise')
+ est6 <- wkde(x1,freq=w1, bw='erd')
+ est7 <- wkde(x1,freq=w1, bw='lscv')
 
  est0 = density(x1,bw="SJ",weights=w1/sum(w1)); 
 
@@ -165,15 +139,15 @@ data based on asymptotic mean absolute error".
  lines(est2, col=3)
  lines(est3, col=4)
  lines(est4, col=5)
- lines(est5, col=6)
- lines(est5, col=6,lty=2)
+ lines(est6, col=4,lty=2)
+ lines(est7, col=6)
+
  legend(max(x),ymax,xjust=1,yjust=1,cex=.8,
   legend=c("N(34.5,1.5)", "SJ", "nrd0",
-  "nrd","amise","mise","lscv(x,w)","lscv(raw)"),
-  col = c(1,1,2,3,4,5,6,6), 
-  lty = c(1,2,1,1,1,1,1,2),
+  "nrd","amise","mise","erd","lscv"),
+  col = c(1,1,2,3,4,5,4,6), 
+  lty = c(1,2,1,1,1,1,2,1),
   lwd=c(1,2,1,1,1,1,1,1))
-
 
 }
 \keyword{smooth}

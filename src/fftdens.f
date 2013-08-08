@@ -1,38 +1,5 @@
 C     Modified by Bin Wang (2012/07/03)
 
-ccccccccccFORTRAN subroutine yldist.f cccccccccc
-      
-c     This subroutine is to compute the modules of y_ell based on the
-c     fourier transformed data after binning.  It can be called to
-c     compute the LSCV scores based on data FFT-transformed.
-      
-C     Last changed: 26 Oct 2012
-
-      subroutine yldist(gcnts, M, Y)
-      double precision Y(*),gcnts(*),theta, sumcos,sumsin
-      integer n,M,l
-      DATA PI2/6.2831853/
-
-c     Initialize Y_ell  to zero
-      do 10 l = 1,M/2
-         Y(l) = dble(0)
- 10   continue
-
-      do 100 l = 1,M/2
-         sumcos = 0.0
-         sumsin = 0.0
-         do 50 k = 1,M
-            theta = PI2 * (k-1.0) * l / M
-            sumcos = sumcos + gcnts(k) * COS(theta)
-            sumsin = sumsin + gcnts(k) * SIN(theta)
- 50      continue
-         Y(l) = (sumcos*sumcos + sumsin * sumsin)/M/M
- 100  continue
-
-      return
-      end
-
-cccccccccc End of yldist.f cccccccccc
 
 
 
