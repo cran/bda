@@ -39,3 +39,4 @@ bda_2.0.11-4:
 	divided in to several groups (intervals).
   (2) add two more distribution families other than "weibull" -- 
 	ewd and datum. 
+2013/02/14: add function ROC

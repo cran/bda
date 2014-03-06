@@ -185,7 +185,7 @@ method */
     }
     llk1 = exp(-pow(a[0]/lambda, kappa));
     for(i=0;i<n;i++) {
-      if(finite(b[i])) {
+      if(isfinite(b[i])) {
 	llk2 = exp(-pow(b[i]/lambda, kappa));
       }else{ 
 	llk2 = 0.0;
