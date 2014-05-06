@@ -3,6 +3,11 @@
 
 \name{npr}
 \alias{npr}
+\alias{npr.default}
+\alias{npr.histogram}
+\alias{print.smooth}
+\alias{plot.smooth}
+\alias{lines.smooth}
 
 \title{non-parametric regression}
 
@@ -11,7 +16,7 @@
 }
 
 \usage{
- npr(y,x, bw, from, to, gridsize)
+ npr(y,x, bw, sd.y, from, to, gridsize,conf.level=0.95)
 }
 \arguments{
   \item{y,x}{Two numerical vectors.}
@@ -20,6 +25,8 @@
   \item{bw}{Smoothing parameter.  Numeric or character value is 
   allowed.  If missing, adaptive (LSCV) bandwidth selector will 
   be used.}
+  \item{sd.y}{Standard deviation of \code{y}.}
+  \item{conf.level}{Confidence level.}
 }
 
 \author{
@@ -33,13 +40,13 @@
  y <- (x-32)^2 + e
  out <- npr(y,x)
  out
- plot(out, type='l')
+ plot(out, type='l', scb=TRUE)
  x0 <- seq(min(x),max(x),length=100)
  y0 <- (x0-32)^2
  lines(x0, y0, col=2)
  points(x, y, pch="*", col=4)
 
+
  }
-\keyword{distribution}
-\keyword{stats}
+\keyword{smooth}
 

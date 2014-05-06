@@ -454,9 +454,7 @@ void EM(double x[], double counts[], double widths[], double weights[],
     // update the jth compoent parameters using NM-alg
     NMMle(x, counts, widths, weights, n, idist, tpar3);
     mu[j] = tpar3[1]; s[j] = tpar3[2];
-
-    //    Rprintf("\np=%f,mu=%f, sigma=%f\n",tpar3[0],tpar3[1],tpar3[2]);
-    
+   
   }
 
   iter = 0;

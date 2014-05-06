@@ -482,133 +482,6 @@ bs.W.invlength <- function(x){
 
 
 
-bootkde <- function(x, method='z.score',scale=1, rounding = 'nearest',
-                    from, to, alpha=0.05, gridsize=512L,na.rm=TRUE,iter=100)
-{
-  method <- match.arg(tolower(method),c("z.score","quantile","cdf"))
-  name <- deparse(substitute(x))
-  sele = is.na(x)
-  if(any(sele)){
-    if(na.rm) x = x[!sele]
-    else stop("'x' contains missing values.")
-  }
-  n = length(x)
-  out = .rounding(x, scale=scale, method=rounding)
-
-  X = out$x; F=out$counts; B=out$width/2; A=-B; N=length(X)
-
-  if(missing(alpha))alpha=0.05
-  if(alpha<=0|alpha>=1)stop("Invalid confidence level.")
-  alpha = min(alpha,1-alpha)
-
-  ucb=NULL; lcb=NULL;
-  ## Set default bandwidth
-  h0 = bw.nrd(rep(X,F)+runif(sum(F),-B,B))
-  h = .Fortran(.F_hbmise,as.double(X), as.double(F),as.double(2*B),
-    as.integer(N), hopt=as.double(h0))$hopt
-
-  if(missing(from)) from = min(X) - 3*h
-  if(missing(to)) to = max(X) + 3*h
-  a <- from;  b <- to
-  ## set grid to evaluate the pdf/cdf
-  M <- 2^(ceiling(log2(gridsize)))
-  gpoints <- seq(a, b, length = M)
-
-  
-  y = .Fortran(.F_ofcpdf,
-    as.double(X), as.double(F),as.double(-B),as.double(B),
-    as.integer(N), y=as.double(gpoints), as.integer(M),
-    para=as.double(h))$y
-  y=cumsum(y)
-  
-  tmp = as.matrix(rep(sum(F),iter), ncol=1);
-  ## simulate the rounding errors by a pilot estimate of F(x) based on a BME
-  out = apply(tmp,1, .bootemp,x=gpoints,y=X,f=F,lb=A,ub=B,
-    Fx=y,from=from,to=to)
-
-  if(method=="z.score"){
-    sigs = apply(out,1,sd);
-    z0 = qnorm(1-alpha/2.);
-    ym = apply(out,1,median);
-    lcb = ym-sigs*z0; lcb[lcb<0]=0;
-    ucb = ym+sigs*z0; ucb[ucb>1]=1
-    y=out[,1];
-    type="Density"
-  }else if(method=="quantile"){
-    ym = apply(out,1,median);
-    lcb = as.numeric(apply(out,1,quantile, alpha/2)); lcb[lcb<0]=0;
-    ucb = as.numeric(apply(out,1,quantile, 1-alpha/2)); ucb[ucb>1]=1
-    y=out[,1];
-    type="Density"
-  }else{
-    out = apply(out,2,cumsum)*(b-a)/M
-    ym = apply(out,1,median);
-    lcb = as.numeric(apply(out,1,quantile, alpha/2)); lcb[lcb<0]=0;
-    ucb = as.numeric(apply(out,1,quantile, 1-alpha/2)); ucb[ucb>1]=1
-    y=out[,1];
-    type="Probability"
-  }
-  
-  return(structure(list(y=y,x=gpoints,ym=ym,n = sum(F),
-                        ucb=ucb,lcb=lcb,alpha=alpha,
-                        call = match.call(), data.name = name
-                        ), class = "bcb"))
-}
-
-.bootemp <- function(n,x,y,f,lb,ub,Fx,from,to){
-  tmp = cbind(y,f,lb,ub);M=length(x);u=runif(n);N=length(f);
-
-  smpl = .Fortran(.F_remp, as.integer(N), as.double(y), as.double(f),
-    as.double(lb), as.double(ub), as.integer(M), as.double(Fx),
-    as.double(x), smpl=as.double(u), as.integer(n))$smpl
-
-  density(smpl,from=from,to=to)$y
-}
-
-plot.bcb <-
-  function (x, main = NULL, xlab = "x", ylab = "Probability",
-            lwd=1, col=1, lty=1, zero.line = TRUE,
-            bgcol='gray',scb=FALSE, ...) 
-{
-  if (is.null(main)) main <- deparse(x$data.name)
-  plot.default(x$x,x$ucb, main = main,
-               xlab = xlab, ylab = ylab, type='n',...)
-  if(scb){
-    cord.x = c(x$x,rev(x$x))
-    cord.y = c(x$lcb, rev(x$ucb))
-    polygon(cord.x,cord.y,border=col,col=bgcol)
-  }
-  lines(x$x,x$y, lwd=lwd, col=col,lty=lty,...)
-  
-  if (zero.line) 
-    abline(h = 0, lwd = 0.1, col = "gray")
-  invisible(NULL)
-}
-
-lines.bcb <-
-  function (x, lwd=1, col=1, lty=1, bgcol='gray', scb=FALSE, ...) 
-{
-  if(scb){
-    cord.x = c(x$x,rev(x$x))
-    cord.y = c(x$lcb, rev(x$ucb))
-    polygon(cord.x,cord.y,border=col,col=bgcol)
-  }
-  lines(x$x,x$y, lwd=lwd, col=col,lty=lty,...)
-  
-  invisible(NULL)
-}
-
-print.bcb <- function (x, digits = NULL, ...) 
-{
-  cat("\nData: ", x$data.name, 
-      " (", x$n, " obs.);\n", sep = "")
-  print(summary(as.data.frame(x[c("x", "y","lcb","ucb")])),
-        digits = digits, 
-        ...)
-  invisible(x)
-}
-
-
 ##  Part of R package BDA
 ##  Copyright (C) 2009-2010 Bin Wang
 ##
@@ -651,63 +524,6 @@ print.bcb <- function (x, digits = NULL, ...)
 }
 
 
-smkde <- function(x,f,bw,gridsize=512L,na.rm=TRUE,
-                  just="center",binned=FALSE, scale=1.0){
-  name <- deparse(substitute(x))
-  if(scale <= 0) stop("Wrong 'scale' level.")
-  x = x/scale
-  ##  bin data if x is not binned.
-  if(binned){
-    if(missing(f))stop("Frequencies missing!")
-    ijust = match.arg(tolower(just),
-      c("center","left","right"))
-    a = switch(ijust,center=0,left=0.5,right=-0.5)
-    x1 = data.frame(x=x+a,f=f,b=0.5)
-    X = x1$x; F = f;
-  }else{
-    if(any(is.na(x))) x = x[!is.na(x)]
-    x0 = .discretize(x,na.rm=na.rm,just=just)
-    X=x0$x; F=x0$f;
-  }
-  m = length(X);B=0.5;n=sum(F)
-  ## define the grid where the densities will be evaluated
-  range.x <- c(X[1] - 0.5, X[m] + 0.5)
-  a <- range.x[1L];  b <- range.x[2L]
-  ## set grid to evaluate the pdf/cdf
-  M <- 2^(ceiling(log2(gridsize)))
-  gpoints <- seq(a, b, length = M)
-  ## to approximate the initial estimate of f(x) by simulation
-  x0 = rep(X,F) + runif(n,-B,B)
-  if(missing(bw))
-    h <-  bw.SJ(x0)# (1/(4*pi))^(1/10)*(243/(35*n))^(1/5)*sqrt(var(x0))*15^(1/5)
-  else h = bw
-  
-  f0 = .nkde(x0,gpoints,h)$y;
-
-##  cv0 = -9999.0
-##  hs = seq(h/10,3*h,length=100)
-##  for(h0 in hs){
-##    fx = .nkde(x0,gpoints,h0)$y;
-##    cv = sum(fx^2)*(b-a)/M-2/(n-1)*(sum(fx)-1/sqrt(2*pi)/h0)
-##    if(cv0<0 || cv < cv0){
-##      f0 = fx; # initial estimate
-##      cv0 = cv
-##      h = h0
-##    }
-##  }
-  iter=100;
-  out <- .Fortran(.F_iterfx, fx=as.double(f0), as.double(gpoints), as.integer(M),
-                  as.double(X), as.double(F), as.integer(m), as.double(B),
-                  h = as.double(h),iter=as.integer(iter))
-  if(out$iter>=iter) warning("Fixed point not found!")
-  y = out$fx
-  sele1 = is.na(y) | !is.finite(out$fx)
-  y[sele1] = 0.0
-  ##  list(out,jout,jfail)
-  return(structure(list(y=y/scale,x=gpoints*scale,bw=out$h,scale=scale,
-                        call = match.call(), data.name = name),
-                   class='bde'))
-}
 
 print.bde <- function (x, digits = NULL, ...) 
 {
@@ -862,35 +678,6 @@ lines.pcb  <- function (x, col='gray',...)
 }
 
 
-
-histospline <-
-  function(x,f,gridsize=512L,na.rm=TRUE,just="center",
-           binned=FALSE, scale=1.0){
-    name <- deparse(substitute(x))
-    if(scale <= 0) stop("Wrong 'scale' level.")
-    x = x/scale
-    ##  bin data if x is not binned.
-    if(binned){
-      if(missing(f))stop("Frequencies missing!")
-      ijust = match.arg(tolower(just),
-        c("center","left","right"))
-      a = switch(ijust,center=0,left=0.5,right=-0.5)
-      x1 = data.frame(x=x+a,f=f,b=0.5)
-      X = x1$x; F = f;
-    }else{
-      if(any(is.na(x))) x = x[!is.na(x)]
-      x0 = .discretize(x,na.rm=na.rm,just=just)
-      X=x0$x; F=x0$f;
-    }
-    rf = F/sum(F)
-    out = spline(X,rf,n=gridsize)
-    f0 = out$y
-    f0[f0<0]=0
-    gpoints = out$x
-    return(structure(list(y=f0/scale,x=gpoints*scale,bw=NULL,scale=scale,
-                          call = match.call(), data.name = name),
-                     class='bde'))
-}
 
 
 ##  the following codes are to compute the optimal bin numbers
@@ -1453,106 +1240,6 @@ density.mm <- function(x,x0,gridsize=500,...)
             class='mm')
 }
 
-
-##  Part of R package meada
-##  Copyright (C) 2009-2010 Bin Wang
-##
-##  Unlimited use and distribution (see LICENCE).
-
-##  2012/10/31: define four functions for a mixture of k normal
-##  components f(x) = \sum p_i * dnorm(x,mu_i, sigma_i)
-
-.dmnorm <- function(x,p,mu,s){
-  k <- length(p)
-  res <- 0
-  for(i in 1:k){
-    res <- res + p[i] * dnorm(x,mu[i],s[i])
-  }
-  res
-}
-
-dmixnorm <- function(x,p,mu,s){
-  if(missing(p)) p <- 1
-  if(missing(mu)) mu <- 0
-  if(missing(s)) s <- 1
-  ndim <- length(p)
-  if(length(mu) != ndim | length(s) != ndim)
-    stop("Parameters have different lengths")
-  if(any(p>1|p<0) | sum(p) != 1) stop("Wrong mixing coefficients")
-  if(any(s<=0)) stop("Invalid standard deviation(s)")
-  
-  sapply(x,.dmnorm,p=p,mu=mu,s=s)
-}
-
-.pmnorm <- function(x,p,mu,s){
-  k <- length(p)
-  res <- 0
-  for(i in 1:k){
-    res <- res + p[i] * pnorm(x,mu[i],s[i])
-  }
-  res
-}
-
-pmixnorm <- function(q,p,mu,s){
-  if(missing(p)) p <- 1
-  if(missing(mu)) mu <- 0
-  if(missing(s)) s <- 1
-  ndim <- length(p)
-  if(length(mu) != ndim | length(s) != ndim)
-    stop("Parameters have different lengths")
-  if(any(p>1|p<0) | sum(p) != 1) stop("Wrong mixing coefficients")
-  if(any(s<=0)) stop("Invalid standard deviation(s)")
-  
-  sapply(q,.pmnorm,p=p,mu=mu,s=s)
-}
-
-.rmnorm <- function(x,p){
-  k <- length(p)
-  cump <- cumsum(p)
-  x[which(runif(1)-cump<=0)[1]]
-}
-
-rmixnorm <- function(n,p,mu,s){
-  if(missing(p)) p <- 1
-  if(missing(mu)) mu <- 0
-  if(missing(s)) s <- 1
-  ndim <- length(p)
-  if(length(mu) != ndim | length(s) != ndim)
-    stop("Parameters have different lengths")
-  if(any(p>1|p<0) | sum(p) != 1) stop("Wrong mixing coefficients")
-  if(any(s<=0)) stop("Invalid standard deviation(s)")
-  n <- ceiling(n)
-  stopifnot(n>0)
-  
-  tmp <- NULL
-  k <- length(p)
-  for(i in 1:k){
-    tmp <- cbind(tmp, rnorm(n,mu[i], s[i]))
-  }
-  res <- apply(tmp,1,.rmnorm,p=p)
-  as.numeric(res)
-}
-
-qmixnorm <- function(prob,p,mu,s){
-  if(missing(p)) p <- 1
-  if(missing(mu)) mu <- 0
-  if(missing(s)) s <- 1
-  sele <- !is.na(prob)
-  if(any(prob[sele]>1|prob[sele]<0))
-    stop("Invalid 'prob' value(s)")
-
-  ndim <- length(p)
-  if(length(mu) != ndim | length(s) != ndim)
-    stop("Parameters have different lengths")
-  if(any(p>1|p<0) | sum(p) != 1) stop("Wrong mixing coefficients")
-  if(any(s<=0)) stop("Invalid standard deviation(s)")
-
-  mu.pool <- sum(p*mu)
-  s.pool <- sqrt(sum(p^2*s^2))  
-  x <- seq(mu.pool-4*s.pool,mu.pool+4*s.pool,length=401L)
-  Fx <- sapply(x,.pmnorm,p=p,mu=mu,s=s)
-  approx(Fx,x,prob)$y
-}
 ## This function is developed to compute the MLEs for different
 ## families of distributions based on data that are weighted, rounded
 ## or censored.
@@ -1809,4 +1496,43 @@ gof.bde <- function(object, x,...) {
            as.integer(length(x)), as.double(rep(0,2)))[[3]]
 }
 
+
+
+.bkde <- function(x,bw,gridsize)
+  {
+    ## set grid to evaluate the pdf/cdf
+    M <- x$nclass
+    a <- x$breaks[1]; b <- x$breaks[M + 1];
+    gpoints <- x$breaks
+    gcounts <- x$counts
+
+    ## to approximate the initial estimate of f(x) by simulation
+    F <- x$counts; X <- x$mids; n <- sum(F)
+    A <- x$breaks[1:M]; B <- x$breaks[-1]
+    x0 <- runif(n,rep(A,F),rep(B,F))
+
+    if(missing(bw))
+        h <-  (1/(4*pi))^(1/10)*(243/(35*n))^(1/5)*sqrt(var(x0))*15^(1/5)
+    else h = bw
+
+    kernel <- "normal"
+    tau <- 4
+    
+    delta  <- (b - a)/(h * (M-1L))
+    L <- M
+
+    lvec <- 0L:L
+    kappa <- dnorm(lvec*delta)/(n*h)
+
+    ## Now combine weight and counts to obtain estimate
+    ## we need P >= 2L+1L, M: L <= M.
+    P <- 2^(ceiling(log(M+L+1L)/log(2)))
+    kappa <- c(kappa, rep(0, P-2L*L-1L), rev(kappa[-1L]))
+    tot <- sum(kappa) * (b-a)/(M-1L) * n # should have total weight one
+    gcounts <- c(gcounts, rep(0L, P-M))
+    kappa <- fft(kappa/tot)
+    gcounts <- fft(gcounts)
+    list(x = (A+B)/2, y = (Re(fft(kappa*gcounts, TRUE))/P)[1L:M], bw=h)
+
+  }
 

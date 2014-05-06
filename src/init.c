@@ -26,11 +26,16 @@ void lpshazard(double *xgrid, double *vx, int *ngrid,
 	       int *size, double *bw, int *lscv, int *ikernel);
 
 // Fkernel.f
-
+void F77_SUB(emmix)(int *y, int *ny, int *ng,
+		    double *X0, double *X,
+		    double *P, double *XBAR, double *VAR,
+		    double *xlogl, int *wk, 
+		    int *itrunc, int *nl, int *nu);
 void F77_SUB(binning)(double *X, double *F, double *W, double *A, 
 		      double *B, int *n, double *xa, double *xb, 
 		      int *M, double *gcnts, int *type);
 void F77_SUB(yldist)(double *gcounts, int *m, double *y);
+
 void F77_SUB(smoothkde)(double *fx, double x0, int *n, 
 			double *x,  double *f, int m,
 			double *w, double *h, int *iter);
@@ -45,6 +50,8 @@ void wkdemae(double *x,double *w,int *size,double *y,int *ny);
 void RcMleWeibull(double *x,double *w,int *size,double *pars);
 void BDMLE(double *f, double *a, double *b, int *nbin,
 	   double *pars, int *npar, int *dist);
+void bdregmle(double *F, double *x,double *freq, 
+	      int *nu, int *n, int *dist, double *pars);
 
 
 //  cbootkde.c/fbootkde.f
@@ -103,6 +110,7 @@ void kspvalue(double *x0);
 
 		 
 static const R_FortranMethodDef FortEntries[] = {
+  {"emmix", (DL_FUNC) &F77_SUB(emmix), 13},
   {"binning", (DL_FUNC) &F77_SUB(binning),  11},
   {"yldist", (DL_FUNC) &F77_SUB(yldist),  3},
   {"smoothkde", (DL_FUNC) &F77_SUB(smoothkde),  9},
@@ -117,6 +125,7 @@ static const R_FortranMethodDef FortEntries[] = {
   {"wkdemae", (DL_FUNC) & wkdemae, 5},
   {"RcMleWeibull", (DL_FUNC) & RcMleWeibull, 4},
   {"BDMLE", (DL_FUNC) & BDMLE, 7},
+  {"bdregmle", (DL_FUNC) & bdregmle, 7},
   //codes above this line have been double-checked
   {"kspvalue", (DL_FUNC) & kspvalue, 1},
   {"wmise", (DL_FUNC) & wmise, 6},

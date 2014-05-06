@@ -35,5 +35,4 @@ Steiner, S. H., Cook, R. J., Farewell, V. T., Treasure, T., Dec 2000. Monitoring
   data(robot)
   dim(robot)
 }
-\keyword{data}
-\keyword{models}
+\keyword{datasets}

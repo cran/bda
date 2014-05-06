@@ -3,6 +3,8 @@
 \alias{print.nprde}
 \alias{plot.nprde}
 \alias{print.kde}
+\alias{plot.bde}
+\alias{print.bde}
 \encoding{UTF-8}
 \title{
  Density Estimation for Weighted Data via Non-parametric Regression

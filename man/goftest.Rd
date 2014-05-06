@@ -32,9 +32,6 @@
 x = rnorm(1000,34.5,1.5)
 y = round(x,0)
 ##  fit by histospline: class=bde
-out1 = histospline(y)
-gof.test(out1,x)
-gof.test(out1,y)
 
 
 }

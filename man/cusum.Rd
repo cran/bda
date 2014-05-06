@@ -86,5 +86,4 @@ Steiner, S. H., Cook, R. J., Farewell, V. T., Treasure, T., Dec 2000. Monitoring
   out = cusum(hst,mu=45)
   plot(out)
 }
-\keyword{data}
-\keyword{models}
+\keyword{htest}

@@ -452,7 +452,7 @@ double NR2p(double x0,
   return x0;
 }
 
-
+/*
 static double rcllkweibull(int npar, double *pars, void *ex)
 // to be called by the Nelder-Mead simplex method
 {
@@ -475,6 +475,7 @@ static double rcllkweibull(int npar, double *pars, void *ex)
   return(-res);
 }
 
+*/
 
 /*  
  * product limit estimate for data with right censoring
@@ -577,11 +578,12 @@ void expmae(double *x,double *w,int *size,double *y,int *ny)
 
 }
 
-/*  binned data analysis*/
-
-static double bdcdf(int npar, double *pars, void *ex)
+/* binned data analysis */
 /* loglikelihood function to be called by the Nelder-Mead simplex
 method */
+
+/*
+static double bdcdf(int npar, double *pars, void *ex)
 {
 
   double *tmp= (double*)ex, res=0.0;
@@ -613,6 +615,7 @@ method */
   return(res);
 }
 
+*/
 
 /*  Computer the MLE for Weibull distribution (Raw data) */
 static double WeibullLlk(int npar, double *pars, void *ex)
@@ -1055,10 +1058,10 @@ double hazardlscv(double x[], double y[],
 double hsmhazard(double xgrid[], int m, double x[], double y[],
 	       int n, double h, int ikernel) 
 {
-  int i,j,k;
+  int i,j;
   double ht[m];
   double h0, dh = 0.05 * h, hopt, gh, gh2, gmin=1.0e+10;
-  h0 = dh;
+  h0 = dh; hopt = 0.0;
   for(i=0; i<100; i++){
     smhazard(xgrid, m,x,y,n,h0,ikernel,ht);
     gh = 0.0;

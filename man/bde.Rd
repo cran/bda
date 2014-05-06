@@ -1,97 +1,137 @@
 \name{bde}
 \alias{bde}
+\alias{bde.histogram}
+\alias{bde.default}
+
 \encoding{UTF-8}
+
 \title{
   Density Estimation for Binned Data
 }
+
 \description{
-Returns x and y coordinates of the density estimate of 
-the probability density based on binned data.  
+  Returns x and y coordinates of the density estimate of 
+  the probability density based on binned data.  
 }
+
 \usage{
- bde(f, breaks, dist="ewd",gridsize=512L,iter=100,...)
+  bde(x, breaks,freq,bw,type="weibull",from,to,gridsize=512L,conf.level)
 }
+
 \arguments{
-\item{f}{
-  vector of frequencies (counts) of different bins.  
-  Missing values are not allowed.
+
+  \item{x}{A vector of sample data. 'NA' values will be 
+  automatically removed.}
+
+  \item{freq}{vector of frequencies (counts) of different bins.  
+  Missing values are not allowed.}
+
+  \item{breaks}{vector of breaking points.}
+
+  \item{bw}{Bin (class) width.}
+
+  \item{from,to,gridsize}{parameters to define fine equally 
+  spaced grid points at which to estimate the density.}
+
+  \item{type}{Distribution family or smoothing type used to fit
+  the histogram.}
+
+  \item{conf.level}{Confidence level for the pointwise/simultaneous
+  confidence bands.}
+
 }
-\item{breaks}{
- vector of breaking points.
-}
-\item{iter}{
- iteration for model fitting.
-}
-\item{gridsize}{
-the number of equally spaced points at which to estimate
-the density.
-}
-\item{dist}{
-  Distribution family to be fit.
-}
-\item{...}{controls}
-}
+
 \value{
-a list containing the following components:
+   a list containing the following components:
 
-\item{x}{
-vector of sorted \code{x} values at which the estimate was computed.
-}
-\item{y}{
-vector of density estimates
-at the corresponding \code{x}.
-}
+   \item{x,y}{vector of sorted \code{x} values at which the 
+   density estimate \code{y} was computed.  }
 
-\item{mean}{an estimate of the mean.}
+   \item{mean,median}{estimates of the mean and median based on the 
+   smooth estimates.}
 
-\item{sigma}{an estimate of the standard deviation.}
+   \item{sigma}{an estimate of the standard deviation.}
+
+   \item{type, pars}{If parametric method is used, return the type of
+   distribution family in \code{type}, and estimated parameters in
+   \code{pars}.}
+
+   \item{ucb, lcb, conf.level}{\code{conf.level} gives the confidence 
+   level; \code{lcb} and \code{ucb} are the corresponding confidence 
+   bands for the density function.}
 
 }
 
 \details{
- A specific family of distribution is fitted to the a set of 
- non-negative data that have binned.  
- Missing values are not allowed.
- Families of distributions supported include: 
-   'ewd' -- exponentiated Weibull distribution;
-   'weibull' -- Weibull distribution;
-   'gb' -- generalized beta distribution,
-   'dagum'.
- Other ditributions being developed include 'gld', 'normal',
-   'gamma', 'beta'.
 
-}
+   Missing values are not allowed. A specific family of distribution
+   is fitted to the a set of non-negative data that have binned.
+   Families of distributions supported include: 
 
-\author{
-  B. Wang  \email{bwang@southalabama.edu}
+   code{ewd}: exponentiated Weibull distribution;
+
+   \code{weibull}{Weibull distribution;} 
+   \code{dagum}{Type I Dagum distribution.}
+
+   Some histogram-based smoothing methods include:
+
+   \code{smkde,smoothkde}{Blower and Kelsall's smooth KDE.}
+   
+   \code{histospline}{Minnottee (1996,1998)'s histospline estimate.}
+   
+   \code{bootkde}{Two-stage bootstrap KDE.}
+
+   \code{npr/lpr/root-unroot}{Estimate the density via local
+   polynomial regression using root-unroot.}
+ 
+  \code{fnmm/nmix/normmix/nm}{Fitting finite normal mixture model
+  using EM algorithm.}
+ 
 }
 
 \references{
-Wang, B.  (2013?). A manuscript is in preparation.
+
+   Wang, B. (2014). JSS paper.
+
+   Blower G, Kelsall J (2002). "Nonlinear kernel density estimation
+   for binned data: convergence in entropy." Bernoulli, 8(4), 423-449.
+
+   Minnottee MC (1996). "The bias-optimized frequency polygon."
+   Comput. Statist., 11, 35-48.
+
+   Minnottee MC (1998). "Achieving higher-order convergence rates for
+   density estimation with binned data." JASA, 93(442), 663-672.
+
+  Wang, B. and Wertelecki, W. (2012) Density Estimation for Data With
+  Rounding Errors.  \emph{Computational Statistics and Data Analysis},
+  doi: 10.1016/j.csda.2012.02.016.
+
 }
 
 \examples{ 
 
-## Mobile 2010 Household income
-## (http://www.clrsearch.com/Mobile-Demographics/AL/Household-Income)
-##  reported mean $61291, median $42574.  
+## parametric method
+  data(hhi)
+  cbind(hhi$mean, hhi$median)
+  (out1 <- bde(freq=hhi$mob,breaks=hhi$breaks, type='weibull'))
+## bootKDE
+  (out1 <- bde(freq=hhi$mob,breaks=hhi$breaks, type='bootkde'))
+  plot(out1, type='l')
 
- breaks <- c(0,15000,25000,35000,50000,75000,100000,125000,150000,200000,Inf)
- x <- c(15783,9748,9150,11512,13609,9422,4861,2565,1843,2495)
+## smooth KDE
+  mu <- 34.5; s <- 1.5; n <- 1000
+  y <- rnorm(n,mu,s) #raw data
+  x <- round(y) #rounded data
+  xhist <- binning(x, breaks=min(x)-0.5, bw=1)
+  out <- bde(xhist,type='smkde')
+  plot(out, type="l")
+## histospline
+  out <- bde(xhist,type='histospline')
+  plot(out, type="l")
+## nprde
+  out <- bde(xhist,type='lpr')
+  lines(out, col=2,lwd=2)
 
-## par(mfrow=c(2,2))
- (out1 <- bde(x,breaks, dist='gb'))
-## (out2 <- bde(x,breaks, dist='weibull'))
-## (out3 <- bde(x,breaks, dist='ewd'))
-## (out4 <- bde(x,breaks, dist='dagum'))
- hist(out1)
- lines(out1, col=2, lwd=2)
-## hist(out2)
-## lines(out2, col=2, lwd=2)
-## hist(out3)
-## lines(out3, col=2, lwd=2)
-## hist(out4)
-## lines(out4, col=2, lwd=2)
 
 }
-\keyword{model}
+\keyword{smooth}

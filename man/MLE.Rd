@@ -31,5 +31,5 @@ w <- rep(1,1000)
 mle(x,w, type='rc', family='weibull')
 
 }
-\keyword{smooth}
+\keyword{distribution}
 

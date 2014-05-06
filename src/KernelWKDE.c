@@ -164,41 +164,6 @@ void wkdemae(double *x,double *w,int *size,double *y,int *ny)
 
 }
 
-/*  binned data analysis*/
-
-static double bdcdf(int npar, double *pars, void *ex)
-/* loglikelihood function to be called by the Nelder-Mead simplex
-method */
-{
-
-  double *tmp= (double*)ex, res=0.0;
-  int i,n = (int)tmp[0]; //first element is the length of x;
-  double kappa = pars[1], lambda= pars[0]; 
-  double f[n], a[n], b[n], llk1,llk2;
-
-  if(lambda > 0.0 && kappa > 0.0){
-    res = 0.0;
-    for(i=0;i<n;i++) {//restore auxiliary information from ex;
-      f[i] = tmp[i+1]; 
-      a[i] = tmp[i+n+1]; 
-      b[i] = tmp[i+2*n+1]; 
-    }
-    llk1 = exp(-pow(a[0]/lambda, kappa));
-    for(i=0;i<n;i++) {
-      if(isfinite(b[i])) {
-	llk2 = exp(-pow(b[i]/lambda, kappa));
-      }else{ 
-	llk2 = 0.0;
-      }
-      res += f[i]*log(llk1-llk2);
-      llk1 = llk2;
-    }
-    res = -res;
-  }else{
-    res = 999999999999.99;
-  }
-  return(res);
-}
 
 void BDMLE(double *f,double *a,double *b,int *nbin,
 	   double *pars, int *npars, int *dist)
@@ -222,4 +187,210 @@ void BDMLE(double *f,double *a,double *b,int *nbin,
   nmmin(npar,dpar,opar,&val,rcllkweibull,&ifail,abstol,reltol, 
 	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
   pars[0] = opar[0]; pars[1] = opar[1];
+}
+
+double bllkWeibull(double x[], double counts[], double kappa, 
+		   double lambda, double alpha, int n, int nu)
+{
+  int i;
+  double res=0.0, tmp=0.0;
+  tmp = counts[0] * pow(1.0 - exp(-pow(x[0]/lambda,kappa)), alpha);
+  if(tmp>0){
+    res = log(tmp);
+  }
+
+  for(i=1;i<n; i++){
+    tmp = counts[i] * (pow(1.0-exp(-pow(x[i]/lambda,kappa)),alpha) - 
+		       pow(1.0-exp(-pow(x[i-1]/lambda,kappa)), alpha));
+    if(tmp>0){
+      res += log(tmp);
+    }
+  }
+  tmp = nu * (1.0 - pow(1.0 - exp(-pow(x[0]/lambda,kappa)), alpha));
+  if(tmp>0){
+    res += log(tmp);
+  }
+
+  return(res);
+}
+
+double bllkDagum(double x[], double counts[], double kappa, 
+		 double lambda, double alpha, int n, int nu)
+{
+  int i;
+  double res=0.0, tmp=0.0;
+  tmp = counts[0] * pow(1.0 + pow(x[0]/lambda,-kappa), -alpha);
+  if(tmp>0.){
+    res = log(tmp);
+  }
+
+  for(i=1;i<n; i++){
+    tmp = counts[i] * (pow(1.0 + pow(x[i]/lambda,-kappa), -alpha) - 
+		       pow(1.0 + pow(x[i-1]/lambda,-kappa), -alpha));
+    if(tmp>0.){
+      res += log(tmp);
+    }
+  }
+  tmp = nu * (1.0 - pow(1.0 + pow(x[n-1]/lambda,-kappa), -alpha));
+  if(tmp>0.){
+    res += log(tmp);
+  }
+  return(res);
+}
+
+void bdrWeibull(double F[], double X[], double counts[], int n, int nu, double pars[]) 
+{
+  int i,j;
+  double y[n], x[n],xbar,ybar,ssxy, ssxx, tmp, llk=0.0,alpha;
+  alpha = pars[2];  //passed to here: cannot be zero or negative.
+  xbar = 0.0;
+  ybar = 0.0;
+  for(i=0; i<n; i++){
+    y[i] = log(-log(1.0-exp(log(F[i])/alpha)));
+    x[i] = log(X[i]);
+    xbar += x[i];
+    ybar += y[i];
+  }
+  xbar /= n;
+  ybar /= n;
+
+  ssxy = 0.0; ssxx = 0.0;
+  for(i=0; i<n; i++){
+    tmp = x[i]-xbar;
+    ssxy += tmp * (y[i]-ybar);
+    ssxx += tmp * tmp;
+  }
+  tmp = ssxy/ssxx;
+  pars[0] = tmp;
+  pars[1] =  exp(xbar - ybar/tmp);
+
+  llk = bllkWeibull(X, counts, pars[0], pars[1], alpha, n,nu);
+  pars[2] = llk;
+
+  double lstep, kstep,lambda0,kappa0;
+  lstep = 0.01 * pars[1];
+  kstep = 0.01 * pars[0];
+  lambda0 = 0.8 * pars[1];
+  kappa0 = 0.8 * pars[0];
+  for(i=0; i<50; i++){
+    for(j=0;j<50;j++){
+      tmp = bllkWeibull(X, counts, kappa0, lambda0,alpha, n,nu);
+      if(tmp > pars[2]){
+	pars[0] = kappa0;
+	pars[1] = lambda0;
+	pars[2] = tmp;
+      }
+      kappa0 += kstep;
+    }
+    lambda0 += lstep;
+  }
+}
+
+
+void bdrDagum(double F[], double X[], double counts[], int n, int nu, double pars[]) 
+{
+  int i,j;
+  double a,b;
+  double y[n], x[n],xbar,ybar,ssxy, ssxx, tmp, llk=0.0,alpha;
+  alpha = pars[2];  //passed to here: cannot be zero or negative.
+  xbar = 0.0;
+  ybar = 0.0;
+  for(i=0; i<n; i++){
+    y[i] = log(exp(-log(F[i])/alpha)-1.0);
+    x[i] = log(X[i]);
+    xbar += x[i];
+    ybar += y[i];
+  }
+  xbar /= n;
+  ybar /= n;
+
+  ssxy = 0.0; ssxx = 0.0;
+  for(i=0; i<n; i++){
+    tmp = x[i]-xbar;
+    ssxy += tmp * (y[i]-ybar);
+    ssxx += tmp * tmp;
+  }
+  b = ssxy/ssxx; a = ybar - b * xbar;
+  pars[0] = -b;  //parameter: a
+  pars[1] =  exp(-a/b); //parameter: b
+
+  llk = bllkDagum(X, counts, pars[0], pars[1],alpha,n,nu);
+  pars[2] = llk;
+
+  double lstep, kstep,lambda0,kappa0;
+  lstep = 0.01 * pars[1];
+  kstep = 0.01 * pars[0];
+  lambda0 = 0.8 * pars[1];
+  kappa0 = 0.8 * pars[0];
+  for(i=0; i<40; i++){
+    for(j=0;j<40;j++){
+      tmp = bllkWeibull(X, counts, kappa0, lambda0,alpha,n,nu);
+      if(tmp > pars[2]){
+	pars[0] = kappa0;
+	pars[1] = lambda0;
+	pars[2] = tmp;
+      }
+      kappa0 += kstep;
+    }
+    lambda0 += lstep;
+  }
+}
+
+void bdregmle(double *F, double *x, double *counts,
+	      int *nusize, int *size, int *dist, double *pars)
+{
+  int i,n=size[0], nu = nusize[0];
+  double llk,lambda=0.0, kappa=0.0,alpha=0.0,tmp;
+
+  switch(dist[0]){
+  case 1: //EWD
+    alpha = 1.;
+    pars[2] = alpha;
+    bdrWeibull(F, x, counts, n, nu, pars);
+    llk = pars[2];
+    tmp = 0.5;
+    for(i=0; i<40;i++){
+      tmp += 0.02;
+      pars[2] = tmp;
+      bdrWeibull(F, x, counts, n, nu, pars);
+      if(pars[2] > llk && R_FINITE(pars[2])){
+	llk = pars[2];
+	alpha = tmp;
+	kappa = pars[0];
+	lambda = pars[1];
+      }
+    }
+    pars[0] = kappa;
+    pars[1] = lambda;
+    pars[2] = alpha;
+    break;
+  case 2: //Dagum
+    alpha = 0.0001;
+    pars[2] = alpha;
+    bdrDagum(F, x, counts, n, nu, pars);
+    llk = pars[2];
+    tmp = alpha;
+    for(i=0; i<1000;i++){
+      if(tmp < 1.5){
+	tmp += 0.002;
+      }else{
+	tmp += 0.1;
+      }
+      pars[2] = tmp;
+      bdrDagum(F, x, counts, n, nu, pars);
+      if(pars[2] > llk && R_FINITE(pars[2])){
+	llk = pars[2];
+	alpha = tmp;
+	kappa = pars[0];
+	lambda = pars[1];
+      }
+    }
+    pars[0] = kappa;
+    pars[1] = lambda;
+    pars[2] = alpha;
+    break;
+  default:
+    pars[2] = 1.0;
+    bdrWeibull(F, x, counts, n, nu, pars);
+  }
 }

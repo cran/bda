@@ -1,8 +1,12 @@
+npr <-
+    function(y,x,bw,sd.y,from,to,gridsize,conf.level=0.95)
+    UseMethod("npr")
 
-npr <- function(y,x,bw,from,to,gridsize)
-  {
-    if(missing(from)) from <- min(x)
-    if(missing(to)) to <- max(x)
+npr.default <-
+    function(y,x,bw,sd.y,from,to,gridsize,conf.level=0.95)
+    {
+        if(missing(from)) from <- min(x)
+        if(missing(to)) to <- max(x)
     stopifnot(to > from)
     
     if(missing(bw)){
@@ -16,12 +20,18 @@ npr <- function(y,x,bw,from,to,gridsize)
     }
 
     ##  Compute the variance based on the raw data
-    ox = order(x)
-    oy = y[ox]; ox = sort(x)
-    sy = sqrt(0.5* mean((diff(oy))^2))
-
+    if(missing(sd.y)){
+        ox = order(x)
+        oy = y[ox]; ox = sort(x)
+        sd.y = sqrt(0.5* mean((diff(oy))^2))
+    }else{
+        stopifnot(is.numeric(sd.y))
+        stopifnot(length(sd.y)==1)
+        stopifnot(sd.y>0)
+    }
+    
     if(missing(gridsize)) gridsize <- 512L
-    stopifnot(gridsize>10)
+    stopifnot(gridsize > 10)
     gpoints <- seq(from, to, length=gridsize)
     n <- length(x)
     stopifnot(length(y) == n)
@@ -37,21 +47,35 @@ npr <- function(y,x,bw,from,to,gridsize)
                     ellx = double(gridsize), kappa=double(1))
 
     ## print(out$kappa)
+    stopifnot(conf.level<1 & conf.level >0)
+
     cv <-  .Fortran(.F_tubecv,
-                    cv=as.double(out$kappa), as.double(0.95))$cv
+                    cv=as.double(out$kappa), as.double(conf.level))$cv
     ## print(cv)
     
     y = out$fx
     sele1 = is.na(y) | !is.finite(out$fx)
     if(any(sele1)) y[sele1] = 0.0
-    MOE <- cv * out$ellx * sy
-    ll = y - MOE; ll[ll<0] <- 0
+    MOE <- cv * out$ellx * sd.y
+    ll = y - MOE; ##ll[ll<0] <- 0
     ul = y + MOE; 
     
-    structure(list(y = y, x = gpoints,
+    structure(list(y = y, x = gpoints, cv=cv,
+                   conf.level = conf.level,
+                   kappa = out$kappa,
                    bw=out$bw, ucb=ul, lcb=ll,
                    call = match.call()
                    ),
               class = 'smooth')
   }
 
+npr.histogram <-
+    function(y,x,bw,sd.y,from,to,gridsize,conf.level=0.95)
+    {
+        f.call <- match.call()
+        out <- .histonpr(x=y,from=from,to=to,
+                         gridsize=gridsize,
+                         conf.level=conf.level)
+        out$call <- f.call
+        out
+   }
