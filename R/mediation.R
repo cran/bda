@@ -1,7 +1,4 @@
 
-###  Mediation test:
-
-
 mediation.test <- function(mv,iv,dv){
   ## mx: mediation variable
   ## iv:  indep. variable

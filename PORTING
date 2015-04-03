@@ -1,8 +1,8 @@
 Version numbering:
 
-0 for alpha (status)
-1 for beta (status)
-2 for release candidate
+0 for alpha (status); 
+1 for beta (status); 
+2 for release candidate; 
 3 for (final) release
 
 bda_1.2.7-31:  algorithms for binned data analysis,
@@ -41,4 +41,28 @@ bda_2.0.11-4:
 	ewd and datum. 
 2013/02/14: add function ROC
 2014/03/19: add plot option to npr(smooth)
-2014/05/06: rewrite/develop algorithms for density estimation based on binned data (histo-smotthing). 
+2014/05/06: rewrite/develop algorithms for density estimation based 
+	on binned data (histo-smoothing). 
+
+2014/05/20: 3.2.0-4 (1) fixed a bug in bootKDE when iter>limit.
+
+2014/05/20: 3.2.0-5 (1) remove CUSUM, ROC, PermTest, and source 
+	C/Fortran codes. (2) MEDE (redistributing weights for density 
+	estimation under measurement errors.) (3) add dependent package
+	MASS for ginv.
+
+2014/05/20: 3.2.0-6 (1) remove MEDE. (2) remove dependency on MASS.
+
+2014/06/10: 4.0.1 (consider difference cases of grouped data: 
+	top-code/non-top-coded, equal bin width/unequal bin width; 
+	bounded data/unbounded.
+	
+2014/06/16: add FMKL GLD fitting.  Weibull fitting.
+
+2014/06/18: add gof.test, add fit.GB, 
+        add print/plot/lines methods for FMKL.
+
+2015/03/01: check gof for GLD/GB for binned data, add an optimaize 
+	estimate based on GOF test.
+
+2015/04/03: move some of the algorithms developed from bstats.

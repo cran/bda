@@ -35,9 +35,6 @@
   B. Wang  \email{bwang@southalabama.edu}
 }
 
-\seealso{
- \code{\link{bfmm}}.
-}
 \examples{
 
 p <- c(.4,.6)

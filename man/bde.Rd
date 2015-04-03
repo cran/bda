@@ -1,7 +1,12 @@
 \name{bde}
 \alias{bde}
 \alias{bde.histogram}
+\alias{bde.bdata}
 \alias{bde.default}
+\alias{print.histosmooth}
+\alias{plot.histosmooth}
+\alias{lines.histosmooth}
+
 
 \encoding{UTF-8}
 
@@ -15,7 +20,9 @@
 }
 
 \usage{
-  bde(x, breaks,freq,bw,type="weibull",from,to,gridsize=512L,conf.level)
+  bde(x, counts, nclass, breaks, bw,
+      type="kde", from, to, gridsize=512L,
+      lbound, conf.level)
 }
 
 \arguments{
@@ -23,12 +30,18 @@
   \item{x}{A vector of sample data. 'NA' values will be 
   automatically removed.}
 
-  \item{freq}{vector of frequencies (counts) of different bins.  
+  \item{counts}{vector of frequencies (counts) of different bins.  
   Missing values are not allowed.}
+
+  \item{nclass}{Number of classes}
 
   \item{breaks}{vector of breaking points.}
 
   \item{bw}{Bin (class) width.}
+
+  \item{lbound}{A numerical value showing where the distribution is
+  bounded to the left.  The distribution is not left bounded if
+  \code{lbound} is missing.}
 
   \item{from,to,gridsize}{parameters to define fine equally 
   spaced grid points at which to estimate the density.}
@@ -47,12 +60,7 @@
    \item{x,y}{vector of sorted \code{x} values at which the 
    density estimate \code{y} was computed.  }
 
-   \item{mean,median}{estimates of the mean and median based on the 
-   smooth estimates.}
-
-   \item{sigma}{an estimate of the standard deviation.}
-
-   \item{type, pars}{If parametric method is used, return the type of
+   \item{type, npar, pars}{If parametric method is used, return the type of
    distribution family in \code{type}, and estimated parameters in
    \code{pars}.}
 
@@ -109,29 +117,7 @@
 }
 
 \examples{ 
-
-## parametric method
   data(hhi)
-  cbind(hhi$mean, hhi$median)
-  (out1 <- bde(freq=hhi$mob,breaks=hhi$breaks, type='weibull'))
-## bootKDE
-  (out1 <- bde(freq=hhi$mob,breaks=hhi$breaks, type='bootkde'))
-  plot(out1, type='l')
-
-## smooth KDE
-  mu <- 34.5; s <- 1.5; n <- 1000
-  y <- rnorm(n,mu,s) #raw data
-  x <- round(y) #rounded data
-  xhist <- binning(x, breaks=min(x)-0.5, bw=1)
-  out <- bde(xhist,type='smkde')
-  plot(out, type="l")
-## histospline
-  out <- bde(xhist,type='histospline')
-  plot(out, type="l")
-## nprde
-  out <- bde(xhist,type='lpr')
-  lines(out, col=2,lwd=2)
-
-
 }
+
 \keyword{smooth}

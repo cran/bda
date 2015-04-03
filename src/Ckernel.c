@@ -25,6 +25,7 @@ typedef double (*Fun3p)(double,double,double);
 //typedef double (*Fun6p)(double,double,double,double*,double*,int);
 typedef double (*Fvvvi)(double,double*,double*,double*,int);
 typedef double (*Fvdi)(double,double*,double,int);
+typedef double (*Fun7p)(double,double,double,double*,double*,double*,int);
 
 
 //////////////////////////////////////////////////////////////////////////    
@@ -431,28 +432,180 @@ void tubecv(double *kappa, double *level){
   kappa[0] = z;
 }
 
-
-/*  MLE for Weibull distribution */
-
-
-double NR2p(double x0, 
-	       double (*g)(double,double,double), 
-	       double (*pg)(double,double),
-	       double kappa, double alpha)
+double GLInt7p(double a, double b,  
+	       double (*fn)(double,double,double,double*,double*,double*,int),
+	       double h, double g,double *half, double *w,double *f,int n)
 {
-  int i=0,imax=1000;
-  double dx,tol=0.00000001;
-  dx=1.0;
-  while(((dx>tol)|(dx/fabs(x0)>tol))&(i<imax)){
-    dx =  (*g)(x0,kappa,alpha)/(*pg)(x0,kappa);
-    x0 -= dx; dx = fabs(dx);
-    i++;
-  };
-  if(i>=imax) x0=-999.;
-  return x0;
+   double integral = 0.0; 
+   double c = 0.5 * (b - a);
+   double d = 0.5 * (b + a);
+   double dum;
+   const double *pB = &B100[NOPZ100 - 1];
+   const double *pA = &A100[NOPZ100 - 1];
+
+   for (; pB >= B100; pA--, pB--) {
+      dum = c * *pB;
+      integral += *pA * ( (*fn)(d - dum,h,g,half,w,f,n) + 
+			  (*fn)(d + dum,h,g,half,w,f,n) );
+   }
+
+   return c * integral;
 }
 
 /*
+The following codes are developed to find the bootstrap MISE optimal
+bandwidth.  The common factor of 1/(2PIn^2) was disregarded.
+ */
+
+double fa(double t, double h, double g, double *H, double *W, double *f,int n){
+  int j;
+  double h2t2 = pow(h*t,2.0),g2t2=pow(g*h,2.0),tmp,sum1,sum2,res;
+  sum1=0.;sum2=0.;tmp=0.;
+  tmp = (1.-1./n)*exp(-(g2t2+h2t2))-2.*exp(-(.5*h2t2+g2t2))+exp(-g2t2);
+  if(fabs(t)==0.0){
+    for(j=0;j<n;j++){
+      sum1 += cos(t*W[j])*f[j];
+      sum2 += sin(t*W[j])*f[j];
+    }
+  }else{
+    for(j=0;j<n;j++){
+      res = sin(H[j]*t)/H[j]/t;
+      sum1 +=  res * cos(t*W[j])*f[j];
+      sum2 +=  res * sin(t*W[j])*f[j];
+    }
+  }
+  res= tmp * (sum1*sum1+sum2*sum2);
+  return res;
+}
+
+void hbmise(double *x,double *f, double *w, int *size, double *hopt)
+/* Input:
+   (1) x[j]: the observations;
+   (3) w[j]: = b[j]-a[j], which the support of the uniform error;
+   (4) size, or n in the code: an integer shows the number of distinct values in y[.]
+   (5) f: frequencies
+   Output: 
+   (1) hopt: the initial bandwidth, which will also be the output.
+     
+   Derived parameters:
+   (1) h is the bandwidth, which is searched over a defined grid by
+   minimizing the BMISE.  We set the grid number 100.  The initial
+   bandwidth h0 was selected by using Silverman's estimate
+   (h=1.06*sigma/n^.2) or the dpik or dpih in package KernSmooth,
+   and we search over the range from h0/10 to k*h0.  Where
+   k=1+max(bj-aj)^2/12/sd(y). We can simply select 2. If the
+   bandwidth is on the boundary, expand the search.
+
+   Controls
+   (1) The integration range is set to t \in [0,U], where U>4/h=40/h0.
+   (2) iter is used to control the maximum search loop.  Maximum 10.
+
+   Remarks: check whether erf() is a build-in function.  If yes, use
+   it directly.
+
+   */
+{
+  int ngrid = 50, n=size[0],i,j,nsum=0;
+  double h0,h,hstep,h2;
+  double tmp1,tmp2,mise, fint,fb;
+  double w1_2[n],w1_2sq[n];
+  double mise0=9999999999.;
+  Fun7p fn[1];
+  fn[0] = fa; //To compute part A to be integrated.
+
+  tmp1 = 0.0;
+  tmp2 = 0.0;
+  for(i=0;i<n;i++){
+    nsum += f[i];
+    tmp1 = tmp1 + x[i]*f[i];
+    tmp2 = tmp2 + x[i] * x[i]*f[i];
+    w1_2[i] = w[i]/2.0;
+    w1_2sq[i]=pow(w1_2[i],2.0);
+  }
+  // initialize bandwidths
+  h0 = hopt[0];
+  h = h0/30.;
+  h2 = h * h;
+  hstep = 1.5*h0/ngrid;
+
+  for(i=0;i<ngrid;i++){
+    h += hstep;
+    fb = 0.0;
+    for(j=0;j<n;j++){
+      tmp1 = exp(-w1_2sq[j]/h2);
+      tmp2 = w1_2[j]/h*M_SQRT_PI*erf(w1_2[j]/h);
+      fb += fabs(1./w1_2sq[j]*(tmp1+tmp2-1.))*f[j];
+    }
+    fint = GLInt7p(0.0,1000/h0,fn[0],h,h,w1_2,x,f,n);
+    mise=M_SQRT_PI*h*fb;
+    tmp1 = (mise+2*fint/nsum/nsum)/2./pow(nsum,2.0)/M_PI;
+    if(tmp1<mise0){
+      hopt[0] = h;
+      mise0 = tmp1;
+    }
+  }
+  //  hopt[0] = h0;
+}
+ 
+/*  End of BMISE bandwidth selector */
+
+
+
+/*
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License as
+ *  published by the Free Software Foundation (a copy of the GNU
+ *  General Public License is available at
+ *  http://www.r-project.org/Licenses/
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ */
+
+/*
+ * Grid.Binning is designed to redistributed the weight along a
+ * defined grid.
+ *
+ *  ngrid is the number of grid points, which equals to the bin number
+ *  plus one.
+ *
+ *  Last updated: Nov 2, 2012
+ */
+void GridBinning(double *x, double *w, int *nx,
+		 double *xlo, double *bw, int *ngrid,
+		 int *truncate, int *linbin, double *gcounts)
+{
+  int i, li, m=ngrid[0], n=nx[0];
+  double binwidth = bw[0], lxi, rem, a=xlo[0];
+  
+  for(i=0; i<m; i++) gcounts[i] = 0.0;
+  
+  for(i=0; i<n; i++){
+    lxi = (x[i] - a)/binwidth;
+    li = (int) lxi;
+    if(linbin[0] == 1)
+      rem = lxi - li;
+    else
+      rem = 0.0;
+
+    if((li>0) && (li<m-1)){
+      gcounts[li] += (1.0-rem) * w[i];
+      gcounts[li+1] += rem * w[i];
+    }
+    
+    if((li<=0)&&(truncate==0))
+      gcounts[0] += w[i];
+    if((li>=m-1)&&(truncate==0)&&(linbin[0] == 1))
+      gcounts[m-1] += w[i];
+    if((li>=m-1)&&(truncate==0)&&(linbin[0] == 0))
+      gcounts[m-2] += w[i];
+  }
+}
+
 static double rcllkweibull(int npar, double *pars, void *ex)
 // to be called by the Nelder-Mead simplex method
 {
@@ -475,15 +628,31 @@ static double rcllkweibull(int npar, double *pars, void *ex)
   return(-res);
 }
 
-*/
+void RcMleWeibull(double *x,double *w,int *size,double *pars)
+{
+  int i,nx=size[0],npar=2;
+  double dpar[npar],opar[npar]; 
+  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
+  double abstol=0.00000000001,reltol=0.0000000000001,val;
+  int ifail=0,trace=0, maxit=1000, fncount;
+  double alpha=1.0, beta=0.5, gamma=2;
+  double yaux[2*nx+1];
+  yaux[0] = nx; //sample size
+  for(i=0;i<nx;i++){
+    yaux[i+1] = x[i];
+    yaux[i+nx+1] = w[i];
+  }
+  nmmin(npar,dpar,opar,&val,rcllkweibull,&ifail,abstol,reltol, 
+	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
+  pars[0] = opar[0]; pars[1] = opar[1];
+}
 
 /*  
  * product limit estimate for data with right censoring
  * Call: rcple(x,y,n[0],...);
  *
  */
-
-void rcple(double x[], double w[], int n, double y[], double h[], int m) 
+void myrcple(double x[], double w[], int n, double y[], double h[], int m) 
 {
   int i,j;
   double xprod=1.0;
@@ -506,69 +675,31 @@ void rcple(double x[], double w[], int n, double y[], double h[], int m)
 
 
 
-void weibullmae(double *x,double *w,int *size,
-		double *pars, double *y,int *ny)
-{
-  int i, j, n=size[0], m=ny[0];
-  double kappa=pars[0], lambda=pars[1];
-  double HX[n], hx[n], x0, t3=0.0;
-  //  rcple(x,w,n,y,Hx,m);
-  rcple(x,w,n,x,HX,n);
-  double t1,t2;
-  t1 = 0.7644174 * pow(n,-.2);
-
-  for(i=0; i<n;i++){
-    // t2 = [f0''(x)]^2/f0(x)
-    //    t3 = (kappa*kappa - 3.0*kappa +2.0)/(y[i]*y[i]) +
-    //      kappa*kappa/pow(lambda, 2.0*kappa+1.0)*pow(y[i], 2.0*kappa-1.0) -
-    //      3.0*kappa*(kappa-1.0)/pow(lambda, kappa)*pow(y[i], kappa-2.0);
-    t3 = pow((kappa-1.0)/x[i]-kappa/lambda*pow(x[i]/lambda,kappa-1.),2.0) -
-      (kappa-1.0)/(x[i]*x[i]) -
-      kappa/(lambda*lambda)*(kappa-1.)*pow(x[i]/lambda,kappa-2.);
-    t2 = dweibull(x[i],kappa,lambda,0)*t3*t3;
-    hx[i] = t1 * pow(t2*HX[i],-.2);
-  }
-
-  for(i=0; i<m;i++){
-    x0 = y[i]; y[i] = 0.0; // reuse y[]
-    for(j=0; j<n; j++){
-      t1 = (x0 - x[j])/hx[j];
-      y[i] += w[j]/(HX[j]*hx[j])*dnorm(t1,0.,1.0,0);
-    }
-  }
-  
-  for(i=0; i<m;i++){
-    y[i] /= n;
-  }
-
-}
-
-
-void expmae(double *x,double *w,int *size,double *y,int *ny)
+void wkdemae(double *x,double *w,int *size,double *y,int *ny)
 {
   int i, j, n=size[0], m=ny[0];
   double lambda=0.0,delta=0.0;
-  double HX[n], hx[n], x0;
+  double Hx[m], HX[n], hx[m], x0;
   for(i=0; i<n;i++){
     lambda += x[i];
     delta  += w[i];
   }
   lambda /= delta; //mle of lambda
-  //  rcple(x,w,n,y,Hx,m);
-  rcple(x,w,n,x,HX,n);
+  myrcple(x,w,n,y,Hx,m);
+  myrcple(x,w,n,x,HX,n);
   double t1,t2;
   t1 = 0.7644174 * lambda * pow(n,-.2);
   t2 = 0.2/lambda;
 
-  for(i=0; i<n;i++){
-    hx[i] = t1 * exp(x[i]*t2) * pow(HX[i],-.2);
+  for(i=0; i<m;i++){
+    hx[i] = t1 * exp(t2) * pow(Hx[i],-.2);
   }
 
   for(i=0; i<m;i++){
     x0 = y[i]; y[i] = 0.0; // reuse y[]
     for(j=0; j<n; j++){
-      t1 = (x0 - x[j])/hx[j];
-      y[i] += w[j]/(HX[j]*hx[j])*dnorm(t1,0.,1.0,0);
+      t1 = (x0 - x[j])/hx[i];
+      y[i] += w[j]/(HX[j]*hx[i])*dnorm(t1,0.,1.0,0);
     }
   }
   
@@ -578,531 +709,516 @@ void expmae(double *x,double *w,int *size,double *y,int *ny)
 
 }
 
-/* binned data analysis */
-/* loglikelihood function to be called by the Nelder-Mead simplex
-method */
 
-/*
-static double bdcdf(int npar, double *pars, void *ex)
+void BDMLE(double *f,double *a,double *b,int *nbin,
+	   double *pars, int *npars, int *dist)
 {
+  int i,nx=nbin[0],npar=2; //2-parameter distribution only
+  double dpar[npar],opar[npar]; 
+  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
+  double abstol=0.00000000001,reltol=0.0000000000001,val;
+  int ifail=0,trace=0, maxit=1000, fncount;
+  double alpha=1.0, beta=0.5, gamma=2;
+  double yaux[3*nx+1];
+  yaux[0] = nx; //sample size
+  for(i=0;i<nx;i++){
+    yaux[i+1] = f[i];
+    yaux[i+nx+1] = a[i];
+    yaux[i+2*nx+1] = b[i];
+  }
 
-  double *tmp= (double*)ex, res=0.0;
-  int i,n = (int)tmp[0]; //first element is the length of x;
-  double kappa = pars[1], lambda= pars[0]; 
-  double f[n], a[n], b[n], llk1,llk2;
+  if(dist[0]==0) npars[0] = 2;  //reserved for later
 
-  if(lambda > 0.0 && kappa > 0.0){
-    res = 0.0;
-    for(i=0;i<n;i++) {//restore auxiliary information from ex;
-      f[i] = tmp[i+1]; 
-      a[i] = tmp[i+n+1]; 
-      b[i] = tmp[i+2*n+1]; 
+  nmmin(npar,dpar,opar,&val,rcllkweibull,&ifail,abstol,reltol, 
+	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
+  pars[0] = opar[0]; pars[1] = opar[1];
+}
+
+double bllkWeibull(double x[], double counts[], double kappa, 
+		   double lambda, double alpha, int n, int nu)
+{
+  int i;
+  double res=0.0, tmp=0.0;
+  tmp = counts[0] * pow(1.0 - exp(-pow(x[0]/lambda,kappa)), alpha);
+  if(tmp>0){
+    res = log(tmp);
+  }
+
+  for(i=1;i<n; i++){
+    tmp = counts[i] * (pow(1.0-exp(-pow(x[i]/lambda,kappa)),alpha) - 
+		       pow(1.0-exp(-pow(x[i-1]/lambda,kappa)), alpha));
+    if(tmp>0){
+      res += log(tmp);
     }
-    llk1 = exp(-pow(a[0]/lambda, kappa));
-    for(i=0;i<n;i++) {
-      if(isfinite(b[i])) {
-	llk2 = exp(-pow(b[i]/lambda, kappa));
-      }else{ 
-	llk2 = 0.0;
-      }
-      res += f[i]*log(llk1-llk2);
-      llk1 = llk2;
+  }
+  tmp = nu * (1.0 - pow(1.0 - exp(-pow(x[0]/lambda,kappa)), alpha));
+  if(tmp>0){
+    res += log(tmp);
+  }
+
+  return(res);
+}
+
+double bllkDagum(double x[], double counts[], double kappa, 
+		 double lambda, double alpha, int n, int nu)
+{
+  int i;
+  double res=0.0, tmp=0.0;
+  tmp = counts[0] * pow(1.0 + pow(x[0]/lambda,-kappa), -alpha);
+  if(tmp>0.){
+    res = log(tmp);
+  }
+
+  for(i=1;i<n; i++){
+    tmp = counts[i] * (pow(1.0 + pow(x[i]/lambda,-kappa), -alpha) - 
+		       pow(1.0 + pow(x[i-1]/lambda,-kappa), -alpha));
+    if(tmp>0.){
+      res += log(tmp);
     }
-    res = -res;
-  }else{
-    res = 999999999999.99;
+  }
+  tmp = nu * (1.0 - pow(1.0 + pow(x[n-1]/lambda,-kappa), -alpha));
+  if(tmp>0.){
+    res += log(tmp);
   }
   return(res);
 }
 
-*/
-
-/*  Computer the MLE for Weibull distribution (Raw data) */
-static double WeibullLlk(int npar, double *pars, void *ex)
-// to be called by the Nelder-Mead simplex method
+void bdrWeibull(double F[], double X[], double counts[], int n, int nu, double pars[]) 
 {
-  double *tmp= (double*)ex, res=0.0;
-  int i,n = (int)tmp[0]; //first element is the length of x;
-  double kappa = pars[0], lambda= pars[1]; 
-  double x[n], w[n];
-  
-  for(i=0;i<n;i++) {//restore auxiliary information from ex;
-    x[i] = tmp[i+1]; 
-    w[i] = tmp[i+n+1]; 
+  int i,j;
+  double y[n], x[n],xbar,ybar,ssxy, ssxx, tmp, llk=0.0,alpha;
+  alpha = pars[2];  //passed to here: cannot be zero or negative.
+  xbar = 0.0;
+  ybar = 0.0;
+  for(i=0; i<n; i++){
+    y[i] = log(-log(1.0-exp(log(F[i])/alpha)));
+    x[i] = log(X[i]);
+    xbar += x[i];
+    ybar += y[i];
   }
-  
-  for(i=0;i<n;i++) {
-    res += w[i]*(log(kappa) + (kappa-1.0)*log(x[i]) - kappa*log(lambda)
-		 -  pow(x[i]/lambda, kappa));
+  xbar /= n;
+  ybar /= n;
+
+  ssxy = 0.0; ssxx = 0.0;
+  for(i=0; i<n; i++){
+    tmp = x[i]-xbar;
+    ssxy += tmp * (y[i]-ybar);
+    ssxx += tmp * tmp;
   }
-  
-  return(-res);
+  tmp = ssxy/ssxx;
+  pars[0] = tmp;
+  pars[1] =  exp(xbar - ybar/tmp);
+
+  llk = bllkWeibull(X, counts, pars[0], pars[1], alpha, n,nu);
+  pars[2] = llk;
+
+  double lstep, kstep,lambda0,kappa0;
+  lstep = 0.01 * pars[1];
+  kstep = 0.01 * pars[0];
+  lambda0 = 0.8 * pars[1];
+  kappa0 = 0.8 * pars[0];
+  for(i=0; i<50; i++){
+    for(j=0;j<50;j++){
+      tmp = bllkWeibull(X, counts, kappa0, lambda0,alpha, n,nu);
+      if(tmp > pars[2]){
+	pars[0] = kappa0;
+	pars[1] = lambda0;
+	pars[2] = tmp;
+      }
+      kappa0 += kstep;
+    }
+    lambda0 += lstep;
+  }
 }
 
-void WeibullMle(double *x,double *w, int *nx, double *pars)
-{
-  int i,n=nx[0],npar=2; //2-parameter distribution only
-  double dpar[npar],opar[npar]; 
-  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
-  double abstol=0.00000000001,reltol=0.0000000000001,val;
-  int ifail=0,trace=0, maxit=1000, fncount;
-  double alpha=1.0, beta=0.5, gamma=2;
-  double yaux[2*n+1];
-  yaux[0] = n; //sample size
-  for(i=0;i<n;i++){
-    yaux[i+1] = x[i];
-    yaux[i+n+1] = w[i];
-  }
 
-  nmmin(npar,dpar,opar,&val,WeibullLlk,&ifail,abstol,reltol, 
-	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
-  pars[0] = opar[0]; pars[1] = opar[1];
+void bdrDagum(double F[], double X[], double counts[], int n, int nu, double pars[]) 
+{
+  int i,j;
+  double a,b;
+  double y[n], x[n],xbar,ybar,ssxy, ssxx, tmp, llk=0.0,alpha;
+  alpha = pars[2];  //passed to here: cannot be zero or negative.
+  xbar = 0.0;
+  ybar = 0.0;
+  for(i=0; i<n; i++){
+    y[i] = log(exp(-log(F[i])/alpha)-1.0);
+    x[i] = log(X[i]);
+    xbar += x[i];
+    ybar += y[i];
+  }
+  xbar /= n;
+  ybar /= n;
+
+  ssxy = 0.0; ssxx = 0.0;
+  for(i=0; i<n; i++){
+    tmp = x[i]-xbar;
+    ssxy += tmp * (y[i]-ybar);
+    ssxx += tmp * tmp;
+  }
+  b = ssxy/ssxx; a = ybar - b * xbar;
+  pars[0] = -b;  //parameter: a
+  pars[1] =  exp(-a/b); //parameter: b
+
+  llk = bllkDagum(X, counts, pars[0], pars[1],alpha,n,nu);
+  pars[2] = llk;
+
+  double lstep, kstep,lambda0,kappa0;
+  lstep = 0.01 * pars[1];
+  kstep = 0.01 * pars[0];
+  lambda0 = 0.8 * pars[1];
+  kappa0 = 0.8 * pars[0];
+  for(i=0; i<40; i++){
+    for(j=0;j<40;j++){
+      tmp = bllkWeibull(X, counts, kappa0, lambda0,alpha,n,nu);
+      if(tmp > pars[2]){
+	pars[0] = kappa0;
+	pars[1] = lambda0;
+	pars[2] = tmp;
+      }
+      kappa0 += kstep;
+    }
+    lambda0 += lstep;
+  }
 }
 
-void WeibullMleNMMIN(double *x,double *w, int *nx, double *pars)
+void bdregmle(double *F, double *x, double *counts,
+	      int *nusize, int *size, int *dist, double *pars)
 {
-  int i,n=nx[0],npar=2; //2-parameter distribution only
-  double dpar[npar],opar[npar]; 
-  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
-  double abstol=0.00000000001,reltol=0.0000000000001,val;
-  int ifail=0,trace=0, maxit=1000, fncount;
-  double alpha=1.0, beta=0.5, gamma=2;
-  double yaux[2*n+1];
-  yaux[0] = n; //sample size
-  for(i=0;i<n;i++){
-    yaux[i+1] = x[i];
-    yaux[i+n+1] = w[i];
-  }
+  int i,n=size[0], nu = nusize[0];
+  double llk,lambda=0.0, kappa=0.0,alpha=0.0,tmp;
 
-  nmmin(npar,dpar,opar,&val,WeibullLlk,&ifail,abstol,reltol, 
-	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
-  pars[0] = opar[0]; pars[1] = opar[1];
-}
-
-/*  Computer the MLE for Normal distribution (Censored data) */
-static double CNormalLlk(int npar, double *pars, void *ex)
-// to be called by the Nelder-Mead simplex method
-{
-  double *tmp= (double*)ex, res=0.0;
-  int i,n = (int)tmp[0]; //first element is the length of x;
-  double kappa = pars[0], lambda= pars[1]; 
-  double w[n], a[n], b[n];
-  
-  for(i=0;i<n;i++) {//restore auxiliary information from ex;
-    a[i] = tmp[i+1]; 
-    b[i] = tmp[i+n+1]; 
-    w[i] = tmp[i+2*n+1]; 
-  }
-  
-  for(i=0;i<n;i++) {
-    if(b[i] > 0.0) {
-      if(b[i] > a[i]){
-	res += w[i]*(pnorm(b[i],kappa,lambda,1,0)
-		     - pnorm(a[i],kappa,lambda,1,0));
+  switch(dist[0]){
+  case 1: //EWD
+    alpha = 1.;
+    pars[2] = alpha;
+    bdrWeibull(F, x, counts, n, nu, pars);
+    llk = pars[2];
+    tmp = 0.5;
+    for(i=0; i<40;i++){
+      tmp += 0.02;
+      pars[2] = tmp;
+      bdrWeibull(F, x, counts, n, nu, pars);
+      if(pars[2] > llk && R_FINITE(pars[2])){
+	llk = pars[2];
+	alpha = tmp;
+	kappa = pars[0];
+	lambda = pars[1];
+      }
+    }
+    pars[0] = kappa;
+    pars[1] = lambda;
+    pars[2] = alpha;
+    break;
+  case 2: //Dagum
+    alpha = 0.0001;
+    pars[2] = alpha;
+    bdrDagum(F, x, counts, n, nu, pars);
+    llk = pars[2];
+    tmp = alpha;
+    for(i=0; i<1000;i++){
+      if(tmp < 1.5){
+	tmp += 0.002;
       }else{
-	res += w[i]*dnorm(a[i],kappa,lambda,0);
+	tmp += 0.1;
       }
+      pars[2] = tmp;
+      bdrDagum(F, x, counts, n, nu, pars);
+      if(pars[2] > llk && R_FINITE(pars[2])){
+	llk = pars[2];
+	alpha = tmp;
+	kappa = pars[0];
+	lambda = pars[1];
+      }
+    }
+    pars[0] = kappa;
+    pars[1] = lambda;
+    pars[2] = alpha;
+    break;
+  default:
+    pars[2] = 1.0;
+    bdrWeibull(F, x, counts, n, nu, pars);
+  }
+}
+
+double qGldFmkl(double u, double lambdas[])
+{
+  double l1=lambdas[0],l2=lambdas[1],l3=lambdas[2],l4=lambdas[3];
+  return(l1+((pow(u,l3)-1.)/l3-(pow(1.-u,l4)-1.)/l4)/l2);
+}
+
+double gRootGldFmkl(double u, double lambdas[], double q)
+{
+  return(qGldFmkl(u, lambdas) - q);
+}
+
+void rootGldFmklBisection(double *q, double *lambdas)
+{
+  int  iter=100, ctr=1;
+  double delta=0.5, tol=1.e-8;
+  double l1=0.0, l2=1.0, r, f1, f2, f3;
+  if(!isfinite(q[0])){
+    if(q[0]>0.)
+      r = 0.0;
+    else
+      r = 1.0;
+  }else{
+    f1 = gRootGldFmkl(l1,lambdas,q[0]);
+    f2 = gRootGldFmkl(l2,lambdas,q[0]);
+    f3 = f2; 
+    if(f1 == 0.0)
+      r = l1;
+    else if(f2 == 0.0)
+      r = l2;
+    else if(f1 * f2 > 0.0){
+      if(f1 > 0.0)
+	r = 0;
+      else
+	r = 1;
     }else{
-      res += w[i]*(1.0 - pnorm(a[i],kappa,lambda,1,0));
+      while(ctr <= iter && fabs(delta) > tol){
+	r = 0.5 * (l1 + l2);
+	f3 = gRootGldFmkl(r,lambdas,q[0]);
+	delta = f2 - f3;
+	if(f3 == 0) break;
+	if(f1 * f3 < 0.0){
+	  l2 = r;
+	  f2 = f3;
+	}
+	else{
+	  l1 = r;
+	  f1 = f3;
+	}
+	ctr++;
+      }
     }
   }
-  
-  return(-res);
+  q[0] = r;
 }
 
-void CNormalMle(double *w, double *a, double *b,
-		int *nx, double *pars)
-{
-  int i,n=nx[0],npar=2; //2-parameter distribution only
-  double dpar[npar],opar[npar]; 
-  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
-  double abstol=0.00000000001,reltol=0.0000000000001,val;
-  int ifail=0,trace=0, maxit=1000, fncount;
-  double alpha=1.0, beta=0.5, gamma=2;
-  double yaux[3*n+1];
-  yaux[0] = n; //sample size
-  for(i=0;i<n;i++){
-    yaux[i+1] = a[i];
-    yaux[i+n+1] = b[i];
-    yaux[i+2*n+1] = w[i];
+void KSPvalue(double *x0){
+  double ksp=0., t=x0[0];
+  int i;
+  for(i=1;i<100;i++){
+    ksp += exp(-2.*pow(i*t,2.));
+    i++;
+    ksp -= exp(-2.*pow(i*t,2.));
   }
-
-  nmmin(npar,dpar,opar,&val,CNormalLlk,&ifail,abstol,reltol, 
-	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
-  pars[0] = opar[0]; pars[1] = opar[1];
+  x0[0] = 2.*ksp;
 }
 
 
-/*  Computer the MLE for Weibull distribution (Censored data) */
-static double CWeibullLlk(int npar, double *pars, void *ex)
-// to be called by the Nelder-Mead simplex method
-{
-  double *tmp= (double*)ex, res=0.0;
-  int i,n = (int)tmp[0]; //first element is the length of x;
-  double kappa = pars[0], lambda= pars[1]; 
-  double w[n], a[n], b[n];
-  
-  for(i=0;i<n;i++) {//restore auxiliary information from ex;
-    a[i] = tmp[i+1]; 
-    b[i] = tmp[i+n+1]; 
-    w[i] = tmp[i+2*n+1]; 
+// ISNA(x): true for R's NA only
+// ISNAN(x): true for R's NA and IEEE NaN
+// R_FINITE(x): false for Inf,-Inf,NA,NaN
+// R_IsNaN(x): true for NaN but not NA
+
+// Rprintf:  printing from a C routine compiled into R
+
+//recursive version to compute factorial of n := n!
+int factorial(int n){
+  return n>=1 ? n * factorial(n-1) : 1;
+}
+
+double g1(double p, int m1, int n11, double a[], double alpha){
+  int i;
+  double p1=0.0, p2=0.0;
+  for(i=0;i<n11;i++)
+    p1 += a[i] * pow(p, i);
+  for(i=n11;i<m1+1;i++){
+    p1 += a[i] * pow(p, i);
+    p2 += a[i] * pow(p, i);
   }
+  return p2/p1 - 0.5 * alpha;
+}
+
+double g2(double p, int m1, int n11, double a[], double alpha){
+  int i;
+  double p1=0.0, p2=0.0;
+  for(i=0;i<n11+1;i++){
+    p1 += a[i] * pow(p, i);
+    p2 += a[i] * pow(p, i);
+  }
+  for(i=n11+1;i<m1+1;i++){
+    p1 += a[i] * pow(p, i);
+  }
+  return p2/p1 - 0.5 * alpha;
+}
+
+double dg1(double p, int m1, int n11, double a[]){
+  int i;
+  double p1, p2=0.0, dp1=0.0, dp2=0.0;
+
+  p1 = a[0];
+  for(i=1;i<n11;i++){
+    p1 += a[i] * pow(p, i);
+    dp1 += i * a[i] * pow(p, i-1);
+  }
+  for(i=n11;i<m1+1;i++){
+    p1 += a[i] * pow(p, i);
+    dp1 += i * a[i] * pow(p, i-1);
+    p2 += a[i] * pow(p, i);
+    dp2 += i * a[i] * pow(p, i-1);
+  }
+  return (dp2 * p1 - p2 * dp1)/(p1 * p1);
+}
+
+double dg2(double p, int m1, int n11, double a[]){
+  int i;
+  double p1, p2=0.0, dp1=0.0, dp2=0.0;
+
+  p1 = a[0];
+  p2 = a[0];
+  for(i=1;i<n11+1;i++){
+    p1 += a[i] * pow(p, i);
+    dp1 += i * a[i] * pow(p, i-1);
+    dp2 += i * a[i] * pow(p, i-1);
+  }
+  for(i=n11+1;i<m1+1;i++){
+    p1 += a[i] * pow(p, i);
+    dp1 += i * a[i] * pow(p, i-1);
+  }
+  return (dp2 * p1 - p2 * dp1)/(p1 * p1);
+}
+
+/* use out to pass the initial value and the final estimate
+
+   The Newton method was used, fast but not stable.  We change to the
+   bisection method instead.  We take small value a = 1e-16 and b=1e6.
+   If not in the range, simply use 0 or 100000+
+ */
+
+void orexactl(int *counts, double *alpha, double *out)
+{
+  int i,n11,n12,n21,n22, n1, n2, m1;
+  n11 = counts[0];
+  n12 = counts[1];
+  n21 = counts[2];
+  n22 = counts[3];
+  n1 = n11+n12;
+  n2 = n21+n22;
+  m1 = n11+n21;
+  double delta = 1.0, p0 = out[0],f0, fa, fb,pa,pb;
+  double a[m1 + 1]; // to store the coefficients
   
-  for(i=0;i<n;i++) {
-    if(b[i] > 0.0) {
-      if(b[i] > a[i]){
-	res += w[i]*(pweibull(b[i],kappa,lambda,1,0)
-		     - pweibull(a[i],kappa,lambda,1,0));
+
+  for(i=0;i < m1+1;i++)
+    a[i] = choose(n1, i) * choose(n2, m1 - i);
+  
+  i = 0;
+  pa = 1.e-16; pb = 1.e6;
+  f0 = g1(p0, m1, n11, a, alpha[0]);
+  if(f0>0.) pb = p0; else pa = p0;
+  fa = g1(pa, m1, n11, a, alpha[0]);
+  fb = g1(pb, m1, n11, a, alpha[0]);   
+
+  while(i<10000 && fabs(delta) >0.00001){
+    if(fa >=0.){
+      p0 = pa; break; //exit
+    }else if(fb<=0.){
+      p0 = pb; break;
+    }else{
+      p0 = 0.5 * (pa + pb);      
+      f0 = g1(p0, m1, n11, a, alpha[0]);
+      if(f0>0.){
+	pb = p0; 
+	fb = g1(pb, m1, n11, a, alpha[0]);   
       }else{
-	res += w[i]*dweibull(a[i],kappa,lambda,0);
+	pa = p0;
+	fa = g1(pa, m1, n11, a, alpha[0]);
       }
-    }else{
-      res += w[i]*(1.0 - pweibull(a[i],kappa,lambda,1,0));
+      i++;
     }
   }
+
+  out[0] = p0;
+}
+
+void orexactu(int *counts, double *alpha, double *out)
+{
+  int i,n11,n12,n21,n22, n1, n2, m1;
+  n11 = counts[0];
+  n12 = counts[1];
+  n21 = counts[2];
+  n22 = counts[3];
+  n1 = n11+n12;
+  n2 = n21+n22;
+  m1 = n11+n21;
+  double delta = 1.0, p0 = out[0],f0, fa, fb,pa,pb;
+  double a[m1 + 1]; // to store the coefficients
   
-  return(-res);
+
+  for(i=0;i < m1+1;i++)
+    a[i] = choose(n1, i) * choose(n2, m1 - i);
+  
+  i = 0;
+  pa = 1.e-16; pb = 1.e6;
+  f0 = g2(p0, m1, n11, a, alpha[0]);
+  if(f0 < 0.) pb = p0; else pa = p0;
+  fa = g2(pa, m1, n11, a, alpha[0]);
+  fb = g2(pb, m1, n11, a, alpha[0]);   
+
+  while(i<10000 && fabs(delta) >0.00001){
+    if(fa <=0.){
+      p0 = pa; break; //exit
+    }else if(fb>=0.){
+      p0 = pb; break;
+    }else{
+      p0 = 0.5 * (pa + pb);      
+      f0 = g2(p0, m1, n11, a, alpha[0]);
+      if(f0<0.){
+	pb = p0; 
+	fb = g2(pb, m1, n11, a, alpha[0]);   
+      }else{
+	pa = p0;
+	fa = g2(pa, m1, n11, a, alpha[0]);
+      }
+      i++;
+    }
+  }
+  //  p0 = g2(10., m1, n11, a, alpha[0]);
+
+  out[0] = p0;
 }
 
-void CWeibullMle(double *w, double *a, double *b,
-		int *nx, double *pars)
-{
-  int i,n=nx[0],npar=2; //2-parameter distribution only
-  double dpar[npar],opar[npar]; 
-  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
-  double abstol=0.00000000001,reltol=0.0000000000001,val;
-  int ifail=0,trace=0, maxit=1000, fncount;
-  double alpha=1.0, beta=0.5, gamma=2;
-  double yaux[3*n+1];
-  yaux[0] = n; //sample size
-  for(i=0;i<n;i++){
-    yaux[i+1] = a[i];
-    yaux[i+n+1] = b[i];
-    yaux[i+2*n+1] = w[i];
-  }
+// to compute the power for an ANOVA-type test for proportions.
 
-  nmmin(npar,dpar,opar,&val,CWeibullLlk,&ifail,abstol,reltol, 
-	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
-  pars[0] = opar[0]; pars[1] = opar[1];
-}
-
-double kbiweight(double x)
-{
-  double t2, res=0.0;
-  if(fabs(x) <= 1.0){
-    t2 = 1.0 - x * x;
-    res = 0.9375 * t2 * t2;
-  }
-  return res;
-}
-double akbiweight(double x, double q)
-{
-  double t2,t3,a,b,res=0.0;
-  if(x >=-1 && x<=q){
-    t3 = pow(1.0+q,5.0) *
-      (81.-168*q+126*q*q-40.*pow(q,3.0) + 5.0*pow(q,4.0));
-    a = 64.*(8.0-24.*q+48.*q*q-45*q*q*q+15*pow(q,4.))/t3;
-    b = 1120.*pow(1.-q,3.0)/t3;
-    t2 = 1.0 - x * x;
-    res = 0.9375 * t2 * t2*(a+b*x);
-  }
-  return res;
-}
-
-double kunif(double x)
-{
-  double res=0.0;
-  if(fabs(x) <= 1.0){
-    res = 0.5;
-  }
-  return res;
-}
-double akunif(double x, double q)
-{
-  double res=0.0;
-  if(x >=-1 && x<=q){
-    res = 4.*(1+pow(q,3.0))/pow(1+q,-4.) +
-      6.*(1-q)*pow(1+q, -3.0) * x;
-  }
-  return res;
-}
-
-double kepan(double x)
-{
-  double res=0.0;
-  if(fabs(x) <= 1.0){
-    res = 0.75 * (1.-x * x);
-  }
-  return res;
-}
-double akepan(double x, double q)
-{
-  double t3,a,b,res=0.0;
-  if(x >=-1 && x<=q){
-    t3 = pow(1.+q, 4.0) * (19.0-18.0*q+3.0*q*q);
-    a = 64.*(2.-4.*q+6.*q*q-3.*pow(q,3.))/t3;
-    b = 240.*pow(1.-q,2.0)/t3;
-    res = 0.75 * (1.-x*x)*(a+b*x);
-  }
-  return res;
-}
-
-void smhazard(double xgrid[], int m, double x[], double y[],
-	      int n, double h, int ikernel, double ht[]) 
+double CalPower(int n0, double p0, int n1, double p1, double alpha)
 {
   int i,j;
-  double q, z;
-  switch ( ikernel ) {
-  case 1: //biweight
-    for(i=0; i<m; i++){
-      ht[i] = 0.0;
-      for(j=0; j<n; j++){
-	z = (xgrid[i]-x[j])/h;
-	if(xgrid[i] >= h && xgrid[i] <= x[n-1]-h){
-	  ht[i] +=  kbiweight(z) * y[j];
-	}else if(xgrid[i] < h){
-	  q = xgrid[i]/h;
-	  ht[i] +=  akbiweight(z,q) * y[j];
-	}else{
-	  q = (x[n-1]-xgrid[i])/h;
-	  ht[i] +=  akbiweight(-z,q) * y[j];
-	}
+  double phat, px, pv, res;
+  res = 0.0;
+  for(i=0;i <= n0;i++){
+    for(j=0;j <= n1;j++){
+      px = dbinom(i, n0, p0, 0) * 
+	dbinom(j, n1, p1, 0);
+      phat = 1.0*(i+j)/(n0+n1);
+      pv = dbinom(i, n0, phat, 0) * 
+	dbinom(j, n1, phat, 0);
+      if(pv < alpha){
+	res += px;
       }
-      ht[i] /= h;
     }
-    break;
-  case 2: // uniform
-    for(i=0; i<m; i++){
-      ht[i] = 0.0;
-      for(j=0; j<n; j++){
-	z = (xgrid[i]-x[j])/h;
-	if(xgrid[i] >= h && xgrid[i] <= x[n-1]-h){
-	  ht[i] +=  kunif(z) * y[j];
-	}else if(xgrid[i] < h){
-	  q = xgrid[i]/h;
-	  ht[i] +=  akunif(z,q) * y[j];
-	}else{
-	  q = (x[n-1]-xgrid[i])/h;
-	  ht[i] +=  akunif(-z,q) * y[j];
-	}
-      }
-      ht[i] /= h;
-    }
-    break;
-  default: //epanechinikov
-    for(i=0; i<m; i++){
-      ht[i] = 0.0;
-      for(j=0; j<n; j++){
-	z = (xgrid[i]-x[j])/h;
-	if(xgrid[i] >= h && xgrid[i] <= x[n-1]-h){
-	  ht[i] +=  kepan(z) * y[j];
-	}else if(xgrid[i] < h){
-	  q = xgrid[i]/h;
-	  ht[i] +=  akepan(z,q) * y[j];
-	}else{
-	  q = (x[n-1]-xgrid[i])/h;
-	  ht[i] +=  akepan(-z,q) * y[j];
-	}
-      }
-      ht[i] /= h;
-    }
-    break;
   }
+  return(res);
 }
 
-void smvhazard(double xgrid[], int m, double x[], double y[],
-	      int n, double h, int ikernel, double ht[]) 
+
+void ppower(double *p0, int *gsize, double *esize, double *alpha,
+	    int *ssize, double *pwr)
 {
-  int i,j;
-  double q, z, t;
-  switch ( ikernel ) {
-  case 1: //biweight
-    for(i=0; i<m; i++){
-      ht[i] = 0.0;
-      for(j=0; j<n; j++){
-	z = (xgrid[i]-x[j])/h;
-	if(xgrid[i] >= h && xgrid[i] <= x[n-1]-h){
-	  t = kbiweight(z);
-	  ht[i] +=  t * t * y[j];
-	}else if(xgrid[i] < h){
-	  q = xgrid[i]/h;
-	  t = akbiweight(z,q);
-	  ht[i] +=  t * t * y[j];
-	}else{
-	  q = (x[n-1]-xgrid[i])/h;
-	  t = akbiweight(-z,q);
-	  ht[i] +=  t * t * y[j];
-	}
-      }
-      ht[i] /= h*h;
+  int ngrid = gsize[0], n0 = ssize[0], n1 = ssize[1];
+  double delta = esize[0], out=0.0, p1;
+  int i,l;
+  
+  l = 0;
+  for(i=0;i<ngrid;i++){
+    p1 = p0[i] + delta;
+    if(p1 >=0.0 && p1 <= 1.0){
+      l++;
+      out += CalPower(n0,p0[i],n1,p1,alpha[0]);
     }
-    break;
-  case 2: // uniform
-    for(i=0; i<m; i++){
-      ht[i] = 0.0;
-      for(j=0; j<n; j++){
-	z = (xgrid[i]-x[j])/h;
-	if(xgrid[i] >= h && xgrid[i] <= x[n-1]-h){
-	  t = kunif(z);
-	  ht[i] +=  t * t * y[j];
-	}else if(xgrid[i] < h){
-	  q = xgrid[i]/h;
-	  t = akunif(z,q);
-	  ht[i] +=  t * t * y[j];
-	}else{
-	  q = (x[n-1]-xgrid[i])/h;
-	  t = akunif(-z,q);
-	  ht[i] +=  t * t * y[j];
-	}
-      }
-      ht[i] /= h*h;
-    }
-    break;
-  default: //epanechinikov
-    for(i=0; i<m; i++){
-      ht[i] = 0.0;
-      for(j=0; j<n; j++){
-	z = (xgrid[i]-x[j])/h;
-	if(xgrid[i] >= h && xgrid[i] <= x[n-1]-h){
-	  t = kepan(z);
-	  ht[i] +=  t * t * y[j];
-	}else if(xgrid[i] < h){
-	  q = xgrid[i]/h;
-	  t = akepan(z,q);
-	  ht[i] +=  t * t * y[j];
-	}else{
-	  q = (x[n-1]-xgrid[i])/h;
-	  t = akepan(-z,q);
-	  ht[i] +=  t * t * y[j];
-	}
-      }
-      ht[i] /= h*h;
-    }
-    break;
   }
+  if(l > 0)
+    pwr[0] = out/l;
 }
 
-double hazardlscv(double x[], double y[],
-		int n, double h, int ikernel) 
-{
-  int i,j;
-  double q, z, t, gh=0.0;
-  switch ( ikernel ) {
-  case 1: //biweight
-    for(i=0; i<n; i++){
-      for(j=0; j<n; j++){
-	if(i != j){
-	  z = (x[i]-x[j])/h;
-	  if(x[i] >= h && x[i] <= x[n-1] - h){
-	    t = kbiweight(z);
-	    gh += t * t * y[j] * y[i];
-	  }else if(x[i] < h){
-	    q = x[i]/h;
-	    t = akbiweight(z,q);
-	    gh +=  t * t * y[j] * y[i];
-	  }else{
-	    q = (x[n-1]-x[i])/h;
-	    t = akbiweight(-z,q);
-	    gh +=  t * t * y[j] * y[i];
-	  }
-	}
-      }
-    }
-    break;
-  case 2: // uniform
-    for(i=0; i<n; i++){
-      for(j=0; j<n; j++){
-	if(i != j){
-	  z = (x[i]-x[j])/h;
-	  if(x[i] >= h && x[i] <= x[n-1]-h){
-	    t = kunif(z);
-	    gh +=  t * t * y[j] * y[i];
-	  }else if(x[i] < h){
-	    q = x[i]/h;
-	    t = akunif(z,q);
-	    gh +=  t * t * y[j] * y[i];
-	  }else{
-	    q = (x[n-1]-x[i])/h;
-	    t = akunif(-z,q);
-	    gh +=  t * t * y[j] * y[i];
-	  }
-	}
-      }
-    }
-    break;
-  default: //epanechinikov
-    for(i=0; i<n; i++){
-      for(j=0; j<n; j++){
-	if(i != j){
-	  z = (x[i]-x[j])/h;
-	  if(x[i] >= h && x[i] <= x[n-1]-h){
-	    t = kepan(z);
-	    gh +=  t * t * y[j] * y[i];
-	  }else if(x[i] < h){
-	    q = x[i]/h;
-	    t = akepan(z,q);
-	    gh +=  t * t * y[j] * y[i];
-	  }else{
-	    q = (x[n-1]-x[i])/h;
-	    t = akepan(-z,q);
-	    gh +=  t * t * y[j] * y[i];
-	  }
-	}
-      }
-    }
-    break;
-  }
-  return gh;
-}
-
-double hsmhazard(double xgrid[], int m, double x[], double y[],
-	       int n, double h, int ikernel) 
-{
-  int i,j;
-  double ht[m];
-  double h0, dh = 0.05 * h, hopt, gh, gh2, gmin=1.0e+10;
-  h0 = dh; hopt = 0.0;
-  for(i=0; i<100; i++){
-    smhazard(xgrid, m,x,y,n,h0,ikernel,ht);
-    gh = 0.0;
-    for(j=1;j<m; j++){
-      gh += 0.5 * (xgrid[j] - xgrid[j-1]) * 
-	(ht[j]*ht[j]+ht[j-1]*ht[j-1]);
-    }
-    gh2 = 0.0;
-    gh2 = hazardlscv(x,y,n,h0,ikernel);
-    gh -= 2.0 * gh2/h0;
-    if(gh<gmin){
-      gmin = gh;
-      hopt = h0;
-    }
-    h0 += dh;
-  }
-  return hopt;
-}
-
-void lpshazard(double *xgrid, double *xvar, int *ngrid, 
-	       double *x, double *y, double *v, int *size, 
-	       double *bw, int *lscv, int *ikernel)
-{
-  int i,m=ngrid[0],n=size[0];
-  double hopt=bw[0], ht[m];
-
-  // initial V(ht) and ht
-  for(i=0; i<m; i++){
-    xvar[i] = 0.0;
-    ht[i] = 0.0;
-  }
-
-  if(lscv[0] == 1){// find hMISE
-    hopt = hsmhazard(xgrid, m,x,y,n,hopt,ikernel[0]);
-  }
-  smhazard(xgrid, m,x,y,n,hopt,ikernel[0],ht);
-  // compute V(ht)
-  smvhazard(xgrid, m,x,v,n,hopt,ikernel[0],xvar);
-  // return results to R
-  bw[0] = hopt;
-  for(i=0; i<m; i++){
-    xgrid[i] = ht[i];
-  }
-}

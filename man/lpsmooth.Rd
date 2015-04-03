@@ -1,10 +1,11 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{npr}
-\alias{npr}
-\alias{npr.default}
-\alias{npr.histogram}
+\name{lpsmooth}
+\alias{lpsmooth}
+\alias{lpsmooth.default}
+\alias{lpsmooth.histogram}
+\alias{lpsmooth.bdata}
 \alias{print.smooth}
 \alias{plot.smooth}
 \alias{lines.smooth}
@@ -16,7 +17,7 @@
 }
 
 \usage{
- npr(y,x, bw, sd.y, from, to, gridsize,conf.level=0.95)
+ lpsmooth(y,x, bw, sd.y, from, to, gridsize,conf.level=0.95)
 }
 \arguments{
   \item{y,x}{Two numerical vectors.}
@@ -38,7 +39,7 @@
  x <- rnorm(100,34.5,1.5)
  e <- rnorm(100,0,2)
  y <- (x-32)^2 + e
- out <- npr(y,x)
+ out <- lpsmooth(y,x)
  out
  plot(out, type='l', scb=TRUE)
  x0 <- seq(min(x),max(x),length=100)

@@ -14,120 +14,53 @@
 ## 2014/04/19: if 'k' is not specified, we try k=1,2,...,10 and choose
 ## the best fit using AICc.
 
-bnmm <- function(breaks,freq,mu,s,p,k, trunc,lognormal=FALSE,
-                 from,to,gridsize=512L)
-    UseMethod("bnmm")
+fit.mixnorm <-
+    function(x,k,mu,s,p, x.range, lognormal=FALSE)
+    UseMethod("fit.mixnorm")
 
-bnmm.default <- function(breaks,freq,mu,s,p,k,trunc,lognormal=FALSE,
-                         from,to,gridsize=512L){
-    f.call <- match.call()
-    if(missing(mu)){# && missing(k)){
-        nr <- length(freq)
-        if(missing(k)){
-            ngroup <- max(1, round(0.5 * nr))
-            ks <- c(1:ngroup)
-        }else{
-            stopifnot(is.numeric(k))
-            k <- round(k)
-            stopifnot(!(any(k<1 | k>nr)))
-            ngroup <- length(k)
-            ks <- sort(k)
-        }
-        res <- .cemmix(breaks=breaks,freq=freq,mu=mu,s=s,p=p,
-                       k=ks[1],trunc=trunc,lognormal=lognormal)
-        aic0 <- res$AICc
-        AIC <- res$AIC;
-        BIC <- res$BIC;
-        AICc <- res$AICc
-
-        if(ngroup>1){
-            for(j in 2:ngroup){
-                res1 <- .cemmix(breaks=breaks,freq=freq,mu=mu,s=s,p=p,
-                                k=ks[j],trunc=trunc,lognormal=lognormal)
-                if(res1$ifault==0){
-                    if(aic0<0 || aic0 > res1$AICc){
-                        res <- res1
-                        aic0 <- res1$AICc
-                    }
-                    AIC <- c(AIC, res1$AIC)
-                    BIC <- c(BIC, res1$BIC)
-                    AICc <- c(AICc, res1$AICc)
-                }else{
-                    AIC <- c(AIC, NA)
-                    BIC <- c(BIC, NA)
-                    AICc <- c(AICc, NA)
-                }
-            }
-            model.sel <- data.frame(g=ks,AIC=AIC,BIC=BIC, AICc=AICc)
-            res$model.sel = model.sel
-        }
-    }else{
-        res <- .cemmix(breaks=breaks,freq=freq,mu=mu,s=s,p=p,k=k,
-                       trunc=trunc, lognormal=lognormal)
-    }
-
-    ## define fine grid point
-    stopifnot(gridsize > 10)
-    nx <- length(breaks)
-    if(missing(from)){
-        if(is.finite(breaks[1]))
-            from <- breaks[1]
-        else
-            from <- 2 * breaks[2] - breaks[3] 
-    }
-    if(missing(to)){
-        if(is.finite(breaks[nx]))
-            to <- max(breaks)
-        else
-            to <- 2* breaks[nx-1] - breaks[nx-2]
-    }
-    x0 <- seq(from, to, length=gridsize)
-
-    if(lognormal){
-        lx0 <- log(x0 - min(x0)) 
-        if(length(res$p)==1)
-            ly0 <- dnorm(lx0, mean=res$mu, sd=res$s)
-        else
-            ly0 <- dmixnorm(lx0,p=res$p, mean=res$mu, sd=res$s)
-        ly0[1] <- 0;
-        tot.mass <- sum(ly0)*(to-from)/gridsize
-        y0 <- ly0/tot.mass
-    }else{
-        if(length(res$p)==1)
-            y0 <- dnorm(x0, mean=res$mu, sd=res$s)
-        else
-            y0 <- dmixnorm(x0,p=res$p, mean=res$mu, sd=res$s)
-    }
-    res$x <- x0;
-    res$y <- y0;
-    res$mean <- sum(x0*y0)*diff(x0)[1]
-    Fx <- cumsum(y0)*diff(x0)[1]
-    res$median <- approx(Fx, x0, 0.5)$y
-    res$call <- f.call
-    res
+fit.mixnorm.default <-
+    function(x,k,mu,s,p, x.range,lognormal=FALSE){
+        f.call <- match.call()
+        xhist <- hist(x, plot=FALSE)
+        res <- fit.mixnorm(xhist,k=k,mu=mu,s=s,p=p,
+                        x.range=x.range,lognormal=lognormal)
+        res$call <- f.call
 }
 
-bnmm.histogram <- function(breaks,freq,mu,s,p,k,
-                           trunc, lognormal=FALSE,
-                           from,to,gridsize=512L){
-    f.call <- match.call()
-   if(missing(trunc)){
-        trunc <- "none"
-        if(breaks$top.coded == -1) trunc <- "left"
-        if(breaks$top.coded == 1) trunc <- "right"
-        if(breaks$top.coded == 2) trunc <- "both"
-    }
+fit.mixnorm.histogram <-
+    function(x, k, mu, s, p, x.range, lognormal=FALSE){
+        f.call <- match.call()
+        xhist <- binning(x)
     
-    res <- bnmm(breaks=breaks$breaks,freq=breaks$counts,
-                mu=mu,s=s,p=p,k=k,trunc=trunc,
-                lognormal=lognormal,
-                from=from,to=to,gridsize=gridsize)
-    res$call <- f.call
-    res
-}
+        res <- fit.mixnorm(x=xhist,
+                        k=k, mu=mu,s=s,p=p,
+                        x.range=x.range,
+                        lognormal=lognormal)
+        res$call <- f.call
+        res
+    }
+
+fit.mixnorm.bdata <-
+    function(x, k, mu, s, p, x.range, lognormal=FALSE){
+        f.call <- match.call()
+
+        res <- .cemmix(breaks=x$breaks,freq=x$counts,
+                       x$top.coded, mu=mu,s=s,p=p,k=k,
+                       x.range=x.range, lognormal=lognormal)
+        res$xhist <- x
+        res$call <- f.call
+
+        xpts <- c(res$x.range[1],x$breaks[1],
+                  x$breaks[x$nclass+1],res$x.range[2])
+        Fx <- cdf.nmix(res, x0=xpts)
+        res$nl <- (Fx$y[2]-Fx$y[1])*sum(x$counts)
+        res$nu <- (Fx$y[4]-Fx$y[3])*sum(x$counts)
+        res
+    }
 
 
-.cemmix <- function(breaks,freq,mu,s,p,k,trunc,lognormal=FALSE){
+.cemmix <- function(breaks,freq,top.coded, mu,s,p,k,
+                    x.range,lognormal=FALSE){
 
     stopifnot(is.numeric(breaks))
     stopifnot(is.numeric(freq))
@@ -148,28 +81,40 @@ bnmm.histogram <- function(breaks,freq,mu,s,p,k,
     ## data, the equations require two extra classes (-\infty, x0)
     ## and (xr,+\infty) with corresponding frequencies n_{l} and
     ## n_{u}.
-    if(missing(trunc)) trunc <- "none"
-    ctrunc <- match.arg(tolower(trunc),
-                       c("left", "right","both","none"))
     itrunc <- 0; trunc <- FALSE # output
     nl <- 0; nu <- 0;
-    if(!is.finite(breaks[nr+1]) || ctrunc=="right"||ctrunc=="both"){
+
+    if(missing(x.range)) x.range <- c(-Inf, Inf)
+
+    if(top.coded == 2){
         itrunc <- 1;
         trunc <- TRUE;
+        nl <- freq[1];
         nu <- freq[nr];
-        breaks <- breaks[-(nr+1)]; freq <- freq[-nr];
-    }
-    if(!is.finite(breaks[1]) || ctrunc=="left"||ctrunc=="both"){
-        itrunc <- 1; nl <- freq[1];
-        trunc <- TRUE;
-        breaks <- breaks[-1]; freq <- freq[-1];
+        breaks <- breaks[-c(1,nr+1)];
+        freq <- freq[-c(1,nr)];
+        x.range <- c(-Inf,Inf)
     }
 
-##    cat("Breaks\n")
-##    print(breaks)
-##    cat("Frequencies\n")
-##    print(freq)
-##    cat("(nl,nu)=(", nl, ",",nu,")")
+    if(top.coded == 1){
+        itrunc <- 1;
+        trunc <- TRUE;
+        nl <- 0
+        nu <- freq[nr];
+        breaks <- breaks[-(nr+1)];
+        freq <- freq[-nr];
+        x.range[2] <- Inf
+    }
+
+    if(top.coded == -1){
+        itrunc <- 1;
+        trunc <- TRUE;
+        nl <- freq[1];
+        nu <- 0
+        breaks <- breaks[-1];
+        freq <- freq[-1];
+        x.range[1] <- -Inf
+    }
     
     ## renew the number of groups (bins)
     nr <- length(freq)
@@ -185,19 +130,21 @@ bnmm.histogram <- function(breaks,freq,mu,s,p,k,
     x0 <- breaks[1]; x1 <- breaks[-1]
     xc <- (breaks[-1]+breaks[-(nr+1)])*0.5
 
-    if(missing(k)){
-        stopifnot(is.numeric(mu))
-        ng <- length(mu)
-        stopifnot(ng <= nr-2)
+    ## if both 'mu' and 'k' are given, first use 'mu'
+    if(missing(mu)){
+        if(missing(k))
+            ng <- 3
+        else
+            ng <- round(k)
+        ng <- min(ng, nr)
+        mu <- sample(xc, size=ng, prob = freq/sum(freq))
     }else{
-        ng <- round(k)
-        stopifnot(ng>0)
-        if(missing(mu)){
-            if(ng==1) mu <- mean(rep(xc, freq))
-            else mu <- runif(ng, min(breaks), max(breaks));
-        }
+        if(missing(k))
+            ng <- length(mu)
+        else
+            stopifnot(length(mu)==k)
     }
-
+    
     if(missing(p)) p <- rep(1/ng,ng)  # initial proportions
     else{
         stopifnot(!any(p<=0))
@@ -206,7 +153,7 @@ bnmm.histogram <- function(breaks,freq,mu,s,p,k,
     
     if(missing(s)) v <- rep(var(rep(xc, freq)), ng)
     else v <- s^2
-
+    
     stopifnot(length(p) == ng)
     stopifnot(length(v) == ng)
 
@@ -228,16 +175,15 @@ bnmm.histogram <- function(breaks,freq,mu,s,p,k,
     AICc = AIC + 2.0 * K * (K+1.) / (N - K - 1.0);
     BIC = -2.0 * llk0 + log(N*2.0*pi) * K;
 
-    model.sel <- data.frame(g=ng, AIC=AIC,BIC=BIC, AICc=AICc)
-    structure(list(x=breaks, y=freq,#faked.
+    structure(list(xhist=NULL, 
                    ng=ng,p=out$p, mu=out$mu-c.glog, s=sqrt(out$v),
-                   llk = out$xlogl, nl = out$nl, nu = out$nu,
+                   llk = out$xlogl, nl = nl, nu = nu,
                    iter = out$iter, ifault = out$ifault,
                    "AIC"=AIC, "BIC"=BIC,"AICc"=AICc,
                    lognormal = lognormal, c.glog=c.glog,
-                   mean=NULL, median=NULL,
+                   x.range = x.range,
                    call = match.call(),
-                   trunc = trunc, model.sel=model.sel),
+                   trunc = trunc),
               class='nmix')
 }
 
@@ -249,17 +195,98 @@ print.nmix <- function(x,...)
         row.names(tmp) <- tmp.names
         tmp <- t(tmp)
         row.names(tmp) <- c("Proportion","Mean", "Std.Dev")
-        print(x$model.sel)
-        cat("\nMean=",x$mean,"\tMedian=",x$median,"\n",sep='')
-        ##        cat("\nAIC :=", x$AIC, "\nBIC :=", x$BIC, "\nAICc :=", x$AICc,"\n")
         cat("\nParameter estimates:\n")
         print(tmp, ...)
-        if(!is.null(x$trunc)){
-            if(!x$trunc){
-                cat("\nEstimates of the lower and upper class frequencies:\n")
-                cat("Lower class: nl=", x$nl, "\tUpper class: nu=", x$nu, "\n")
-            }
+        if(!x$trunc){
+            cat("\nEstimates of the lower and upper class frequencies:\n")
+            cat("Lower class: nl=", x$nl, "\tUpper class: nu=", x$nu)
         }
+        cat("\n")
     }
+
+plot.nmix <- function(x,hist=TRUE,...){
+    res <- .bdataTohist(x$xhist)
+    out <- pdf.nmix(x)
+    
+    if(hist){
+        plot(res,...)
+        lines(out,...)
+    }else{
+        plot(out, ...)
+    }
+}
+
+lines.nmix <- function(x,...){
+    out <- pdf.nmix(x)
+    lines(out,...)
+}
+
+pdf.nmix <- function(x, x0, from, to, gridsize=512){
+    stopifnot(class(x)=='nmix')
+    if(missing(x0)){
+        xhist <- x$xhist
+        xhist2 <- .bdataTohist(xhist)
+        k <- xhist$nclass
+        if(missing(from))
+            from <- xhist2$breaks[1]
+        if(missing(to))
+            to <- xhist2$breaks[k+1]
+        stopifnot(to > from)
+        x0 <- seq(from, to, length=gridsize)
+    }
+    x.range <- x$x.range
+    if(x$lognormal){
+        x0 <- log(x0 - min(x0))
+        x.range <- log(x.range)
+    }
+    y0 <- dmixnorm(x0,p=x$p, mean=x$mu, sd=x$s)
+    tot.mass <- diff(pmixnorm(x.range,p=x$p, mean=x$mu, sd=x$s))
+    y0 <- y0/tot.mass
+    list(x = x0, y = y0);
+}
+
+cdf.nmix <- function(x, x0, from, to, gridsize=512){
+    stopifnot(class(x)=='nmix')
+    if(missing(x0)){
+        xhist <- x$xhist
+        xhist2 <- .bdataTohist(xhist)
+        k <- xhist$nclass
+        if(missing(from))
+            from <- xhist2$breaks[1]
+        if(missing(to))
+            to <- xhist2$breaks[k+1]
+        stopifnot(to > from)
+        x0 <- seq(from, to, length=gridsize)
+    }
+    x.range <- x$x.range
+    if(x$lognormal){
+        x0 <- log(x0 - min(x0))
+        x.range <- log(x.range)
+    }
+    y0 <- pmixnorm(x0,p=x$p, mean=x$mu, sd=x$s)
+    tot.mass <- diff(pmixnorm(x.range,p=x$p, mean=x$mu, sd=x$s))
+    y0 <- y0/tot.mass
+    list(x = x0, y = y0);
+}
+
+.dnmix <- function(res,x, x0){
+    ##  this subroutine is not used.  Use pdf.nmix instead
+    if(missing(x0)){
+        k <- length(res$mids)
+        a <- res$breaks[1]
+        b <- res$breaks[k+1]
+        gridsize <- 100
+        x0 <- seq(a, b, length=gridsize)
+    }
+    x.range <- x$x.range
+    if(x$lognormal){
+        x0 <- log(x0 - min(x0))
+        x.range <- log(x.range)
+    }
+    y0 <- dmixnorm(x0,p=x$p, mean=x$mu, sd=x$s)
+    tot.mass <- diff(pmixnorm(x.range,p=x$p, mean=x$mu, sd=x$s))
+    y0 <- y0/tot.mass
+    list(x = x0, y = y0);
+}
 
 

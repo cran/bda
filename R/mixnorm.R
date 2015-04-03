@@ -1,5 +1,5 @@
 
-##  Part of R package meada
+##  Part of R package BDA
 ##  Copyright (C) 2009-2010 Bin Wang
 ##
 ##  Unlimited use and distribution (see LICENCE).

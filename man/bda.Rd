@@ -8,8 +8,7 @@
 \description{
 
 This package collects algorithms for density estimation based on
-grouped (pre-binned) data, left-/right- or interval censored data, 
-and data contaminated by measurement errors.
+grouped (pre-binned) data.
 
 }
 
