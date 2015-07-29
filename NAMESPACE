@@ -57,3 +57,15 @@ S3method(print, glm.dose)
 S3method(print, histosmooth) 
 S3method(print, nmix) 
 S3method(print, odds)
+
+importFrom("graphics", "abline", "boxplot", "hist", "lines", "par",
+            "plot", "plot.default", "points", "polygon", "text",
+            "title")
+importFrom("stats", "acf", "approx", "binomial", "bw.nrd", "coef",
+            "dbeta", "density", "dexp", "dnorm", "dweibull", "family",
+            "fft", "glm", "lm", "median", "nls", "optim", "pbeta",
+            "pchisq", "pexp", "pnorm", "poisson", "pweibull", "qbeta",
+            "qchisq", "qexp", "qnorm", "qqline", "qqnorm", "quantile",
+            "qweibull", "rbeta", "rexp", "rnorm", "runif", "sd",
+            "spline", "ts.plot", "uniroot", "var", "vcov")
+

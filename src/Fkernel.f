@@ -340,3 +340,129 @@ C ===========================================================================
          p(I) = x1
  100  END DO
       END
+
+
+c  Part of R package BDA
+c  Copyright (C) 2009-2010 Bin Wang
+c
+c  Unlimited use and distribution (see LICENCE).
+
+cccccccccc FORTRAN subroutine iterfx.f cccccccccc
+
+c     2011/10/09.
+
+      subroutine iterfx(fx,x0,n,x,f,m,w,h,iter)
+      integer m,n,i,j,iter, nsum,k,i1,i2,loop
+      double precision fx(n),f0(n),x0(n),x(m),f(m),h,w
+      double precision wd, dx, fk(n,n),gk(n),df
+      double precision t1,t2, xl,xu
+
+      DOUBLE PRECISION PI,TWOPI, twoh, twopih
+      PARAMETER(PI=3.141592653589793D0,TWOPI=2D0*PI)
+
+      wd = 2.0 * w
+      dx = x0(2) - x0(1)
+      twoh = -0.5/h/h
+      twopih = 1.0/sqrt(twopi)/h
+
+      nsum = 0
+      do 50 i=1, m
+         nsum = nsum + f(i)
+ 50   enddo
+      do 100 i=1, n
+         f0(i) = fx(i)
+ 100   enddo
+      do 150 i=1, n
+         gk(i) = twopih * exp(dx*(i-1.0)**2.0)
+ 150   enddo
+
+
+      do 250 i=1, n
+         fk(i,i) = gk(1)
+         do 200 j=i+1, n
+            fk(i,j) = gk(j-i)
+            fk(j,i) = fk(i,j)
+ 200      enddo
+ 250   enddo
+
+       loop = 0
+       do while(loop .LT. iter .AND. df .GT. 0.0001)
+          df = 0.0
+          do 500 k=1,n
+             fx(k) = 0.0
+             do 450 i=1, m
+                xl = x(i) - w
+                xu = x(i) + w
+                i1 = max0(1, ceiling((xl-x0(1))/dx))
+                i2 = min0(n, floor((xu-x0(1))/dx))
+                t1 = 0.0
+                t2 = 0.0
+                do 400 j=i1,i2
+                   t1 = t1 + fk(k,j)*f0(j)
+                   t2 = t2 + f0(j)
+ 400            enddo
+                fx(k) = fx(k) + f(i)*t1/t2/nsum
+ 450         enddo
+             df = df + (fx(k) - f0(k))**2.0
+             f0(k) = fx(k)
+ 500      enddo
+       enddo
+      iter = loop
+      end
+      
+cccccccccc End of iterfx.f cccccccccc
+
+
+c  Part of R package KernSmooth
+c  Copyright (C) 1995  M. P. Wand
+c
+c  Unlimited use and distribution (see LICENCE).
+
+cccccccccc FORTRAN subroutine linbin.f cccccccccc
+
+c Obtains bin counts for univariate data
+c via the linear binning strategy. If "trun=0" then
+c weight from end observations is given to corresponding
+c end grid points. If "trun=1" then end observations
+c are truncated.
+
+c Last changed: 20 MAR 2009
+
+      subroutine linbin(X,n,a,b,M,trun,gcnts)
+      double precision X(*),a,b,gcnts(*),lxi,delta,rem
+      integer n,M,i,li,trun
+
+c     Initialize grid counts to zero
+
+      do 10 i=1,M
+         gcnts(i) = dble(0)
+10    continue
+
+      delta = (b-a)/(M-1)
+      do 20 i=1,n
+         lxi = ((X(i)-a)/delta) + 1
+
+c        Find integer part of "lxi"
+
+         li = int(lxi) 
+
+         rem = lxi - li
+         if (li.ge.1.and.li.lt.M) then
+            gcnts(li) = gcnts(li) + (1-rem)
+            gcnts(li+1) = gcnts(li+1) + rem
+         endif
+
+         if (li.lt.1.and.trun.eq.0) then
+            gcnts(1) = gcnts(1) + 1
+         endif
+
+         if (li.ge.M.and.trun.eq.0) then
+            gcnts(M) = gcnts(M) + 1
+         endif
+
+20    continue
+
+      return
+      end
+
+cccccccccc End of linbin.f cccccccccc

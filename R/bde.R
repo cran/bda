@@ -52,13 +52,8 @@ bde.bdata <-
     f.call <- match.call()
     ## support Dagum and Weibull only
     type <- match.arg(tolower(type),
-                      c('kde',
-                        'ewd',
-                        'dagum',
-                        'weibull',
+                      c('kde', 'smkde','smoothkde',
                         'histospline','spline',
-                        'smkde','smoothkde',
-                        'fnmm','nmix','normmix','nm',
                         'lpr','npr','root-unroot',
                         'bootkde'))
     out <- switch(type,
@@ -70,9 +65,11 @@ bde.bdata <-
                       gridsize=gridsize,conf.level=conf.level),
                   'root-unroot' = .histonpr(x,from=from,to=to,
                       gridsize=gridsize, conf.level=conf.level),
-                  'kde' = .histokde(x,from=from,to=to,
-                      gridsize=gridsize, lbound=lbound),
-                  warning("To be developed.")
+                  'spline'=,'histospline'= .histospline(x, from=from,
+                                to=to, gridsize=gridsize),
+                  'smkde'=, 'smoothkde'=,
+                  'kde' = .smkde(x,bandwidth=bw, from=from,to=to,
+                      gridsize=gridsize)
                   )
     out$call <- f.call
     out

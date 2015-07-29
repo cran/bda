@@ -9,6 +9,14 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
+void F77_SUB(linbin)(double *x, int *n, double *a, double *b,
+		     int *m, int *trun, double *gcounts);
+
+
+void F77_SUB(iterfx)(double *fx, double x0, int *n, double *x,
+		     double *f, int m,
+		     double *w, double *h, double *iter);
+		    
 void rootGldFmklBisection(double *q, double *lambdas);
 void KSPvalue(double *x0);
 
@@ -51,7 +59,8 @@ void ppower(double *p0, int *gsize, double *esize, double *alpha,
 
 void orexactl(int *counts, double *alpha, double *out);
 void orexactu(int *counts, double *alpha, double *out);
-		 
+
+
 static const R_FortranMethodDef FortEntries[] = {
   {"KSPvalue", (DL_FUNC) & KSPvalue, 1},
   {"emmix", (DL_FUNC) &F77_SUB(emmix), 13},
@@ -72,6 +81,9 @@ static const R_FortranMethodDef FortEntries[] = {
   {"lpsmooth", (DL_FUNC) & lpsmooth, 11},
 
   {"rootGldFmklBisection", (DL_FUNC) & rootGldFmklBisection, 2},
+
+  {"iterfx", (DL_FUNC) &F77_SUB(iterfx),  9},
+  {"linbin", (DL_FUNC) &F77_SUB(linbin),  7},
 
   {NULL, NULL, 0}
 };

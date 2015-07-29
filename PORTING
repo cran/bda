@@ -66,3 +66,5 @@ bda_2.0.11-4:
 	estimate based on GOF test.
 
 2015/04/03: move some of the algorithms developed from bstats.
+
+2015/04/16: add histospline, smkde, and ofc data 
