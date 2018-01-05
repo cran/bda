@@ -1,81 +1,203 @@
+## To do: for y = r(x) + e when the data is very large, we can group
+## the data and then fit lpr based on the grouped data.  Use a
+## masurement error model instead.  That says, we fit y.bar = r(x.bar)
+## + e, and x = x.bar + e2.  Laplace error can be assumed for e2 to
+## speed up the algorithm.
+
+
+
+## we use four method to compute the variance of r(x).
+
+## method 1) Larry Wasserman--nearly unbiased.  This method based on
+## an lps object;
+
+## method 2) Rice 1984
+
+## method 3) Gasser et al (1986) -- a variation of method 3.
+
+## method 4) For heteroscedastic errors. Need to estimate based on an
+## lpr object. Yu and Jones (2004).
+
+lps.variance <- function(y,x, gridsize, bw, method="Rice"){
+    method <- match.arg(tolower(method),
+                        c("wasserman","rice","gasser",
+                          "heteroscedastic"))
+    sele <- is.na(y)|is.na(x)
+    y <- y[!sele]; x <- x[!sele]
+    
+    n <- length(y)
+    if(method == "wasserman"){
+        ## we fit lpr
+        if(missing(bw)) stop("'bw' is missing")
+        ## we fit an lpr to get temporary results.  sd.y does not matter.
+        fhat <- lpsmooth(y=y,x=x,bw=bw,sd.y=1)
+        tmp <- .DesignMatrix(x,bw)
+        nu1 <- sum(diag(tmp))
+        dl2 <- apply(tmp^2,2,sum)
+        nu2 <- sum(dl2)
+        res <- sum((y-fhat$y)^2)/(n-2*nu1+nu2)
+    }else if(method == "rice"){
+        ox <- order(x)
+        oy <- y[ox];
+        ox <- sort(x)
+        res <- 0.5* mean((diff(oy))^2)
+    }else if(method == "gasser"){
+        ox <- order(x)
+        oy <- y[ox];
+        ox <- sort(x)
+        ai <- (ox[3:n] - ox[2:(n-1)])/(ox[3:n] - ox[1:(n-2)])
+        bi <- (ox[2:(n-1)] - ox[1:(n-2)])/(ox[3:n] - ox[1:(n-2)])
+        ci2 <- 1/(ai^2+bi^2+1)
+        di <- ai * oy[1:(n-2)] + bi * oy[3:n] - oy[2:(n-1)]
+        res <- mean(ci2*di^2)
+    }else{
+        if(missing(bw)) stop("'bw' is missing")
+        ## we fit an lpr to get temporary results.  sd.y does not matter.
+        
+        from <- min(x)
+        to <- max(x)
+        if(missing(gridsize)) gridsize <- 512L
+        stopifnot(gridsize > 10)
+        gpoints <- seq(from, to, length=gridsize)
+        fhat <- .Fortran(.F_lpsmooth,
+                         fx = as.double(x), as.integer(n),
+                         as.double(x), as.double(y), as.integer(n),
+                         bw = as.double(bw), as.integer(0),
+                         as.double(c(from, to)), as.integer(0),
+                         ellx = double(n), kappa=double(1))
+        z <- 2.0 * log(abs(y - fhat$fx))
+        qhat <- .Fortran(.F_lpsmooth,
+                         fx = as.double(gpoints), as.integer(gridsize),
+                         as.double(x), as.double(z), as.integer(n),
+                         bw = as.double(bw), as.integer(0),
+                         as.double(c(from, to)), as.integer(0),
+                         ellx = double(gridsize), kappa=double(1))
+        res <- exp(qhat$fx)
+    }
+    invisible(res)
+}
+
+## this function can be used to compute the design (smoothing) matrix
+.DesignMatrix <- function(x,bw){
+    stopifnot(bw > 0)
+    x <- x[!is.na(x)]; # remove missing values
+    ndim = length(x)
+    
+    L = rep(0,ndim*ndim)
+    DM = .Fortran(.F_DesignMatrix, as.double(x), as.integer(ndim),
+        as.double(bw), dm=as.double(L))$dm
+    matrix(DM, ncol = ndim)
+}
+
+
+
+## 2015/08/3: add two options lscv=T/F and adaptive=T/F.
+
+## If lscv = FALSE, use the given bandwidth to fit lpr directly.
+
+## If lscv = TRUE and adaptive = FALSE, compute lscv bandwidth and fit
+## lpr.  Initial bandwidth should be given.
+
+## If lscv = TRUE and adaptive = TURE, compute lscv bandwidth and then
+## compute varying smoothing parameter, then fit lpr.  This algorithm
+## could be extremeely slow when the sample size is very large.
+
 lpsmooth <-
-    function(y,x,bw,sd.y,from,to,gridsize,conf.level=0.95)
+    function(y,x,bw,sd.y,lscv=FALSE, adaptive=FALSE,
+             from,to,gridsize,conf.level=0.95)
     UseMethod("lpsmooth")
 
 lpsmooth.default <-
-    function(y,x,bw,sd.y,from,to,gridsize,conf.level=0.95)
-    {
-        if(missing(from)) from <- min(x)
-        if(missing(to)) to <- max(x)
-        stopifnot(to > from)
+    function(y,x,bw,sd.y,lscv=FALSE, adaptive=FALSE,
+             from,to,gridsize,conf.level=0.95)
+        {
+            sele <- is.na(y)|is.na(x)
+            y <- y[!sele]; x <- x[!sele]
+
+            size.limit <- 1000
+            n <- length(y)
+            if(missing(from)) from <- min(x)
+            if(missing(to)) to <- max(x)
+            stopifnot(to > from)
         
-        if(missing(bw)){
-            lscv <- 1
-            bw <- bw.nrd(x)
-            adaptive = 1  # use adaptive bandwidth selector
-        }else{
-            stopifnot(bw>0)
-            lscv <- 0
-            adaptive = 0  # don't use adaptive bandwidth selector
-        }
+            if(missing(bw)){
+                if(n < size.limit){
+                    lscv <- 1
+                    bw <- bw.nrd(x)
+                    adaptive = 1  # use adaptive bandwidth selector
+                    lscv <- 0
+                }else{
+                    stop("'bw' is missing.")
+                }
+            }else{
+                stopifnot(bw>0)
+            }
+
+            if(n >= size.limit){
+                if(lscv || adaptive)
+                    stop("sample size is too large. consider binning the data")
+                lscv <- 0
+                adaptive <- 0
+            }else{
+                lscv <- ifelse(lscv, 1, 0)
+                adaptive <- ifelse(adaptive, 1, 0)  
+            }
+            
+            ##  Compute the variance based on the raw data
+            if(missing(sd.y)){
+                sd.y <- lps.variance(y=y,x=x,bw=bw)
+            }else{
+                stopifnot(is.numeric(sd.y))
+                stopifnot(!any(sd.y < 0))
+            }
         
-        ##  Compute the variance based on the raw data
-        if(missing(sd.y)){
-            ox = order(x)
-            oy = y[ox]; ox = sort(x)
-            sd.y = sqrt(0.5* mean((diff(oy))^2))
-        }else{
-            stopifnot(is.numeric(sd.y))
-            stopifnot(length(sd.y)==1)
-            stopifnot(sd.y>0)
-        }
-        
-        if(missing(gridsize)) gridsize <- 512L
-        stopifnot(gridsize > 10)
+            if(missing(gridsize)) gridsize <- 512L
+            stopifnot(gridsize > 10)
 
 
-        gpoints <- seq(from, to, length=gridsize)
-        n <- length(x)
-        stopifnot(length(y) == n)
-        if(any(is.na(x)|is.na(y)))
-            stop("Missing value(s) in 'x' and/or 'y'")
-        if(any(!is.finite(x)|!is.finite(y)))
-            stop("Inifite value(s) in 'x' and/or 'y'")
-        out <- .Fortran(.F_lpsmooth,
-                        fx = as.double(gpoints), as.integer(gridsize),
-                        as.double(x), as.double(y), as.integer(n),
-                        bw = as.double(bw), as.integer(lscv),
-                        as.double(c(from, to)), as.integer(adaptive),
-                        ellx = double(gridsize), kappa=double(1))
-        
-        ## print(out$kappa)
-        stopifnot(conf.level<1 & conf.level >0)
-        
-        cv <-  .Fortran(.F_tubecv,
-                        cv=as.double(out$kappa), as.double(conf.level))$cv
-        ## print(cv)
-        
-        y = out$fx
-        sele1 = is.na(y) | !is.finite(out$fx)
-    if(any(sele1)) y[sele1] = 0.0
-        MOE <- cv * out$ellx * sd.y
-        ll = y - MOE; ##ll[ll<0] <- 0
-        ul = y + MOE;
-        
-        pars <- list(cv=cv, kappa=out$kappa, bw=out$bw, npar=NULL)
-        
-        structure(list(y = y, x = gpoints,
-                       conf.level = conf.level,
-                       type="lpsmooth",
-                       pars = pars,
-                       ucb=ul, lcb=ll,
-                       call = match.call()
-                       ),
-                  class = 'histosmooth')
-    }
+            gpoints <- seq(from, to, length=gridsize)
+            n <- length(x)
+            stopifnot(length(y) == n)
+            if(any(is.na(x)|is.na(y)))
+                stop("Missing value(s) in 'x' and/or 'y'")
+            if(any(!is.finite(x)|!is.finite(y)))
+                stop("Inifite value(s) in 'x' and/or 'y'")
+            out <- .Fortran(.F_lpsmooth,
+                            fx = as.double(gpoints), as.integer(gridsize),
+                            as.double(x), as.double(y), as.integer(n),
+                            bw = as.double(bw), as.integer(lscv),
+                            as.double(c(from, to)), as.integer(adaptive),
+                            ellx = double(gridsize), kappa=double(1))
+            
+            ## print(out$kappa)
+            stopifnot(conf.level<1 & conf.level >0)
+            
+            cv <-  .Fortran(.F_tubecv,
+                            cv=as.double(out$kappa), as.double(conf.level))$cv
+            ## print(cv)
+            
+            y = out$fx
+            sele1 = is.na(y) | !is.finite(out$fx)
+            if(any(sele1)) y[sele1] = 0.0
+            MOE <- cv * out$ellx * sd.y
+            ll = y - MOE; ##ll[ll<0] <- 0
+            ul = y + MOE;
+            
+            pars <- list(cv=cv, kappa=out$kappa, bw=out$bw, npar=NULL)
+            
+            structure(list(y = y, x = gpoints,
+                           conf.level = conf.level,
+                           type="lpsmooth",
+                           pars = pars,
+                           ucb=ul, lcb=ll,
+                           call = match.call()
+                           ),
+                      class = 'histosmooth')
+        }
 
 lpsmooth.histogram <-
-    function(y,x,bw,sd.y,from,to,gridsize,conf.level=0.95)
+    function(y,x,bw,sd.y,lscv=FALSE, adaptive=FALSE,
+             from,to,gridsize,conf.level=0.95)
     {
         f.call <- match.call()
         xhist <- binning(y)
@@ -87,7 +209,8 @@ lpsmooth.histogram <-
    }
 
 lpsmooth.bdata <-
-    function(y,x,bw,sd.y,from,to,gridsize,conf.level=0.95)
+    function(y,x,bw,sd.y,lscv=FALSE, adaptive=FALSE,
+             from,to,gridsize,conf.level=0.95)
     {
         f.call <- match.call()
         out <- .histonpr(x=y,from=from,to=to,

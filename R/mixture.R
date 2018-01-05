@@ -175,13 +175,14 @@ fit.mixnorm.bdata <-
     AICc = AIC + 2.0 * K * (K+1.) / (N - K - 1.0);
     BIC = -2.0 * llk0 + log(N*2.0*pi) * K;
 
+    
     structure(list(xhist=NULL, 
                    ng=ng,p=out$p, mu=out$mu-c.glog, s=sqrt(out$v),
                    llk = out$xlogl, nl = nl, nu = nu,
                    iter = out$iter, ifault = out$ifault,
                    "AIC"=AIC, "BIC"=BIC,"AICc"=AICc,
                    lognormal = lognormal, c.glog=c.glog,
-                   x.range = x.range,
+                   x.range = x.range,N=N,K=K,
                    call = match.call(),
                    trunc = trunc),
               class='nmix')

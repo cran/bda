@@ -23,7 +23,8 @@ dmixnorm <- function(x,p,mean,sd){
   ndim <- length(p)
   if(length(mean) != ndim | length(sd) != ndim)
     stop("Parameters have different lengths")
-  if(any(p>1|p<0)) stop("Wrong mixing coefficients")
+##  if(any(p>1|p<0)) stop("Wrong mixing coefficients")
+  p[p<0] <- 0.00001
   p <- p/sum(p)
   if(any(sd<=0)) stop("Invalid standard deviation(sd)")
   
@@ -45,8 +46,11 @@ pmixnorm <- function(q,p,mean,sd){
   if(missing(sd)) sd <- 1
   ndim <- length(p)
   if(length(mean) != ndim | length(sd) != ndim)
-    stop("Parameters have different lengths")
-  if(any(p>1|p<0)) stop("Wrong mixing coefficients")
+      stop("Parameters have different lengths")
+
+  p[p<0] <- 0.00001
+  
+##  if(any(p>1|p<0)) stop("Wrong mixing coefficients")
   p <- p/sum(p)
   if(any(sd<=0)) stop("Invalid standard deviation(sd)")
   
@@ -66,7 +70,8 @@ rmixnorm <- function(n,p,mean,sd){
   ndim <- length(p)
   if(length(mean) != ndim | length(sd) != ndim)
     stop("Parameters have different lengths")
-  if(any(p>1|p<0)) stop("Wrong mixing coefficients")
+##  if(any(p>1|p<0)) stop("Wrong mixing coefficients")
+  p[p<0] <- 0.00001
   p <- p/sum(p)
   if(any(sd<=0)) stop("Invalid standard deviation(sd)")
   n <- ceiling(n)

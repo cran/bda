@@ -76,9 +76,10 @@
    is fitted to the a set of non-negative data that have binned.
    Families of distributions supported include: 
 
-   code{ewd}: exponentiated Weibull distribution;
+   \code{ewd}{exponentiated Weibull distribution;}
 
    \code{weibull}{Weibull distribution;} 
+   
    \code{dagum}{Type I Dagum distribution.}
 
    Some histogram-based smoothing methods include:
@@ -92,7 +93,7 @@
    \code{npr/lpr/root-unroot}{Estimate the density via local
    polynomial regression using root-unroot.}
  
-  \code{fnmm/nmix/normmix/nm}{Fitting finite normal mixture model
+   \code{fnmm/nmix/normmix/nm}{Fitting finite normal mixture model
   using EM algorithm.}
  
 }

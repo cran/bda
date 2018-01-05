@@ -1,8 +1,8 @@
 \name{ld50.logit}
 \alias{ld50.logit}
-\alias{print.glm.dose}
-\alias{plot.glm.dose}
-\alias{lines.glm.dose}
+\alias{print.ld50}
+\alias{plot.ld50}
+\alias{lines.ld50}
 
 \title{
 Predict Doses for Binomial Assay model (using counts)

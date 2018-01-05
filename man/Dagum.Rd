@@ -8,10 +8,10 @@
 \alias{lines.Dagum}
 \alias{fit.Dagum}
 
-\title{The Exponentiated Weibull Distribution}
+\title{The Dagum Distribution}
 \description{
   Density, distribution function, quantile function 
-  for the exponentiated Weibull distribution. 
+  for the Dagum distribution. 
 }
 \usage{
  ddagum(x, shape1,scale,shape2)

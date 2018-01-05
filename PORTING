@@ -67,4 +67,32 @@ bda_2.0.11-4:
 
 2015/04/03: move some of the algorithms developed from bstats.
 
-2015/04/16: add histospline, smkde, and ofc data 
+2015/07/29: add histospline, smkde, and ofc data 
+
+2015/07/30: Rd file updated for the Dagum distribution.
+
+2017/04/03: add a npr function for deep sequencing data analysis. errors-in-variables and simultaneuous confidence bands.
+
+2017/09/12: change outputs of .rescale.mm and normalize.NGS.MM.
+
+2017/09/13: rewrite normalize.NGS.MM(...).  Using QN-like method -- two stage normalization.
+
+2017/09/29: copula fitting
+2017/10/03: add an internal function to choose initial values to fit binned data using normal mixture.
+2017/10/09: update fit.NGS function; update npreg function.
+2017/10/13: rewrite NGS data binning function bin.NGS and fit.NGS function
+2017/10/14: add back mixed=TRUE option to fit.NGS.  If sLog=0 and mixed=FALSE, 
+            fit top-coded-type histogram.
+2017/10/15: fitting lognormal using MME, MLE based adjusted data, and MLE based
+	    on binned data.
+2017/10/16: add option 'binned' to tell whether MLE was refined based on 
+	    binned data.
+2017/10/25: best fit by change number of components (k).
+2017/10/26: add k=1 in fit.NGS and change the summary function accordingly.
+            add heterogeneity test in fit.NGS
+2017/10/27: add to fit.lognormal a test H0: mean = 0 vs Ha: mean > 0.
+2017/10/28: revised fit.lognormal (check parameters in nlm() function
+2017/11/14: add a test to deg.NGS showing whether the data is under-detection 
+            level or not (using binomial distribution to compute the exact 
+            probabilities.
+2017/11/15: revise lognormal fitting function.

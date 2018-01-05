@@ -34,7 +34,7 @@ ld50.logitfit <- function(rate, dose, p = 0.5) {
   res <- structure(x.p, SE = SE, p = p,
                    dose=dose0,rate=rate0,
                    x=x0, y = y0)
-  class(res) <- "glm.dose" 
+  class(res) <- "ld50" 
   res
 }
 
@@ -61,11 +61,11 @@ ld50.logit <- function(ndead, ntotal, dose, cf = 1:2, p = 0.5) {
   res <- structure(x.p, SE = SE, p = p,
                    dose=dose,rate=nalive/ntotal,
                    x=x0, y = y0)
-  class(res) <- "glm.dose" 
+  class(res) <- "ld50" 
   res
 }
 
-print.glm.dose <- function(x, ...)
+print.ld50 <- function(x, ...)
 {
   M <- cbind(x, attr(x, "SE"))
   dimnames(M) <- list(names(x), c("Dose", "SE"))
@@ -73,7 +73,7 @@ print.glm.dose <- function(x, ...)
   NextMethod("print")
 }
 
-plot.glm.dose <- function(x, lty=1,lwd=1,...)
+plot.ld50 <- function(x, lty=1,lwd=1,...)
 {
   y = attr(x,"dose")
   z = attr(x,"rate")
@@ -85,7 +85,7 @@ plot.glm.dose <- function(x, lty=1,lwd=1,...)
   abline(h=0.5,lty=3)
 }
 
-lines.glm.dose <- function(x, lty=1,lwd=1,pch=pch,...)
+lines.ld50 <- function(x, lty=1,lwd=1,pch=pch,...)
 {
   y = attr(x,"dose")
   z = attr(x,"rate")

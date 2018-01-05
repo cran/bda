@@ -1222,3 +1222,40 @@ void ppower(double *p0, int *gsize, double *esize, double *alpha,
     pwr[0] = out/l;
 }
 
+void DesignMatrix(double *xv, int *size, double *bw, double *dm){
+  int i,j, n =size[0];
+  double K[n][n],l[n][n];
+  double S1[n], S2[n]; // two vectors S1(xj), S2(xj)
+  double t1, bsum, h=bw[0];
+  
+  // to compute the kernel values
+  for(i=0;i<n;i++){
+    for(j=i; j<n;j++){
+      t1 = xv[i] - xv[j];
+      K[i][j] = dnorm(t1/h,0.0, 1.0, 0);
+      K[j][i] = K[i][j];
+    }
+  }
+  // compute S1, S2.
+  for(j=0; j<n;j++){
+    S1[j] = 0.0; S2[j] = 0.0;
+    for(i=0;i<n;i++){
+      t1 = xv[i] - xv[j];
+      S1[j] += K[i][j] * t1;
+      S2[j] += K[i][j] * t1 * t1;
+    }
+  }
+  // compute B and Lii: store sum(bi) to B, and bi to Lii
+  for(j=0; j<n;j++){
+    bsum = 0.0;
+    for(i=0;i<n;i++){
+      t1 = xv[i] - xv[j];
+      l[i][j] = K[i][j] * (S2[j]- t1 * S1[j]);
+      bsum += l[i][j];
+    }
+    for(i=0;i<n;i++){
+      dm[j*n+i] = l[i][j]/bsum;      
+    }
+  }
+}
+

@@ -9,9 +9,17 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
+
 void F77_SUB(linbin)(double *x, int *n, double *a, double *b,
 		     int *m, int *trun, double *gcounts);
 
+void F77_SUB(lbtwod)(double *x, int *n, double *a1,
+		     double *a2, double *b1, double *b2, int *m1,
+		     int *m2, double *gcounts);
+
+void F77_SUB(bintwod)(double *x, int *n, double *g1,
+		      double *g2, int *m1,
+		      int *m2, double *gcounts);
 
 void F77_SUB(iterfx)(double *fx, double x0, int *n, double *x,
 		     double *f, int m,
@@ -23,6 +31,8 @@ void KSPvalue(double *x0);
 // lprsmooth.c
 void tubecv(double *kappa, double *level);
 
+void DesignMatrix(double *xv, int *size, double *bw, double *dm);
+		    
 void lpsmooth(double *xgrid, int *ngrid, double *x, double *y, 
 	      int *size, double *bw, int *lscv, 
 	      double *range, int *adaptive, double *ellx, 
@@ -79,11 +89,14 @@ static const R_FortranMethodDef FortEntries[] = {
 
   {"tubecv", (DL_FUNC) & tubecv, 2},
   {"lpsmooth", (DL_FUNC) & lpsmooth, 11},
+  {"DesignMatrix", (DL_FUNC) & DesignMatrix, 4},
 
   {"rootGldFmklBisection", (DL_FUNC) & rootGldFmklBisection, 2},
 
   {"iterfx", (DL_FUNC) &F77_SUB(iterfx),  9},
   {"linbin", (DL_FUNC) &F77_SUB(linbin),  7},
+  {"lbtwod", (DL_FUNC) &F77_SUB(lbtwod),  9},
+  {"bintwod", (DL_FUNC) &F77_SUB(bintwod),  7},
 
   {NULL, NULL, 0}
 };
