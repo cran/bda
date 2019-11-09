@@ -1,3 +1,84 @@
+## 2018/01/11: Fit NGS data using raw data (without binning, but we
+## will handle the zeros and extreme high expressions differently).
+
+## to fit a mixed normal mixture with three components (j=1,2,3) and
+## (j=0) to a single gene expression profile.  Return the fitted
+## components.  Also, we return the weights w(i,j) for gene i.
+
+EM.NGS <- function(x, mixed=TRUE){
+    tol <- .Machine$double.eps
+    if(any(is.na(x)))
+        stop("missing value(s) found")
+    if(any(x<0))
+        stop("negative value(s) not allowed")
+    if(mixed){
+        p0 <- mean(x==0) # component 0
+        y <- log(x[x > 0]) # log-transformation
+    }else{
+        xmin <- min(x[x>0])
+        y <- log(x + 0.25*xmin)
+        p0 <- 0
+    }
+    ## exclude a 5% of the extremely large data in fitting the model
+    n <- length(y)
+    m <- round(n * 0.95)
+    y <- sort(y)[1:m]
+    ## initialize the estimates.  In case some values have very high
+    ## frequencies, we bin the data to group the data into three
+    ## classes.
+    tmp <- NULL
+    l <- hist(y, plot=FALSE,nclass=50)$counts
+    ncum <- cumsum(l)
+    n1 <- ncum[which(ncum>m/3)[1]]
+    n2 <- ncum[which(ncum>2*m/3)[1]]
+    p1 <- n1/m; p2 <- (n2-n1)/m; p3 <- 1-p1-p2
+    mu1 <- mean(y[1:n1]);s1 <- sd(y[1:n1])
+    mu2 <- mean(y[(n1+1):n2]);s2 <- sd(y[(n1+1):n2])
+    mu3 <- mean(y[(n2+1):m]);s3 <- sd(y[(n2+1):m])
+    
+    pars <- c(mu1,mu2,mu3,s1,s2,s3,p1,p2)
+    res <- .Fortran(.F_em3,
+                    iter=as.integer(length(y)), 
+                    as.double(y),
+                    pars=as.double(pars),
+                    as.double(tol))
+    tmp <- 1- sum(res$pars[7:8])
+    mu1 <- res$pars[1]
+    mu2 <- res$pars[2]
+    mu3 <- res$pars[3]
+    s1 <- res$pars[4]
+    s2 <- res$pars[5]
+    s3 <- res$pars[6]
+    p1 <- res$pars[7]
+    p2 <- res$pars[8]
+    p3 <- 1-p1-p2
+
+    x0 <- seq(min(y), max(y),length=401)
+    f1 <- dnorm(x0,mu1,s1)
+    f2 <- dnorm(x0,mu2,s2)
+    f3 <- dnorm(x0,mu3,s3)
+    f <- p1*f1+p2*f2+p3*f3
+    
+    out <- data.frame(
+        mean = res$pars[1:3],
+        sd   = res$pars[4:6],
+        p    = c(res$pars[7:8],tmp)
+    )
+    structure(list(x=x0, y=f, p0=p0,
+                   iter=res$iter,
+                   fit=out),
+              class='NGS.MM')
+}
+
+print.NGS.MM <- function(x,...){
+    if(x$iter<50000)
+        cat("\nIteration:", x$iter)
+    else
+        cat("\nConverge failed")
+    cat("\nComponent of zeros:", x$p0,"\n")
+    print(x$fit)
+}
+
 ## Created in June 2016 for the UCAS talk Updated on 06/16/2017 --
 ## rewrite the density estimation function and define a new R object,
 ## add plot function.
@@ -31,6 +112,8 @@ bin.NGS <- function(x, sLog, n.first=10){
         p0 <- mean(x == 0)
         x <- log(x[x>0])
     }
+    m <- length(unique(x))
+    n.first <- min(m, n.first)
     
     res <- .binNGS(x, n.first=n.first)
     if(p0>0)
@@ -49,7 +132,7 @@ print.NGS.hist <- function(x,...){
     print(x$xhist$count)
     cat("\n")
 }
-
+ 
 plot.NGS.hist <- function(x,ylim=NULL,...){
     if(is.null(ylim))
         ylim <- c(0, max(x$p0,x$xhist$density))
@@ -74,24 +157,27 @@ plot.NGS.hist <- function(x,ylim=NULL,...){
     }
     y <- x[x>xq[k]]
     yhist <- hist(y, plot=FALSE)
-    ##    print(yhist)
     ybreaks <- yhist$breaks
     tmp.breaks <- c(xq[1]-abs(xq[1]*.1),xq[2:k],ybreaks[-1])    
-    ##tmp <- xq[2:(k+1)]*.9999
-    ##tmp.breaks <- c(xq[1],tmp)
-    ##xbreaks <- c(tmp.breaks, ybreaks[-1])
     xhist <- hist(x, breaks=tmp.breaks, plot=FALSE)
     xhist
 }
 
 ## We assume all data are NGS data and without any transformation such
 ## as log- or glog-transformation.  We will transform the data within
-## the fit.NGS function. 
+## the fit.NGS function.
+
+## 2018/01/21: if the same size is too small or when there are two few
+## distinct values, we fit a lognormal distribution.
+
 fit.NGS <- function(x, iter.max=30,reflect=TRUE){
+    LogNormal <- TRUE
+
     if(class(x) == 'histogram'){
         xhist0 <- x;
         p0 <- 0;
         sLog <- -1
+        p.signal <- NA
         x <- structure(list(xhist=xhist0, 
                             sLog = sLog,
                             p0 = p0),
@@ -101,71 +187,112 @@ fit.NGS <- function(x, iter.max=30,reflect=TRUE){
         xhist0 <- x$xhist
         p0 <- x$p0;
         sLog <- x$sLog
+        n <- sum(xhist0$counts)
+        n0 <- round(n*p0)
+        p.signal <- pbinom(n-n0,n,0.5, lower.tail=FALSE)
     }else{
-        x <- bin.NGS(x, sLog=0)
-        xhist0 <- x$xhist
-        p0 <- x$p0;
-        sLog <- x$sLog
-    }
-    
-    ## To stablize the mixture model estimation, we repeat the
-    ## procedue and carefully choose initial values.
-    if(reflect)
-        xhist0$breaks[1] <- 2*xhist0$breaks[1]-xhist0$breaks[2]
-
-#    if(x$sLog==0 && x$p0 > 0 && !mixed)
-#        xhist0$breaks[1] <- -Inf
-
-    maxLLK <- NULL; fit0 <- NULL
-    fnmm <- list() #to store different fitted results with k components
-    LLK1 <- NULL
-    for(k in 1:7){
-        res <- .fitMM.NGS(xhist0,iter.max,k=k)
-        llk0 <- res$llk
-        if(p0>0){
-            n0 <- round(sum(xhist0$counts)/(1-p0)*p0)
-            llk0 <- llk0 + n0 * log(p0)
+        n <- length(x)
+        n0 <- sum(x==0,na.rm=TRUE)
+        p.signal <- pbinom(n-n0,n,0.5, lower.tail=FALSE)
+        tmp <- unique(x)
+        if(length(tmp) > 30 || p.signal < 0.05){
+            LogNormal <- FALSE
+            x <- bin.NGS(x, sLog=0)
+            xhist0 <- x$xhist
+            p0 <- x$p0;
+            sLog <- x$sLog
+        }else{
+            LogNormal <- TRUE
+            p0 <- mean(x==0,na.rm=TRUE)
         }
-        K <- res$K
-        N <- res$N
-        AIC = -2.0 * llk0 + 2.0 * K;
-        AICc = AIC + 2.0 * K * (K+1.) / (N - K - 1.0);
-        BIC = -2.0 * llk0 + log(N*2.0*pi) * K;
-        tmp <- list(fitted=res$fit,AIC=AIC,BIC=BIC,AICc=AICc)
-        fnmm[[k]] <- tmp
-        ## we choose the model that minimize AIC/BIC/AICc
-        ##print(AICc)
-        ##print(maxLLK)
-        if(length(AICc) == 0) AICc <- NA
-        if(!is.na(AICc)){
-            if(is.null(maxLLK)){
-                np0 <- K
-                LLK0 <- llk0;
-                maxLLK <- AICc
-                LLK1 <- llk0;
-                np1 <- K;
-                fit0 <- res$fit
-            }else if(maxLLK > AICc){
-                maxLLK <- AICc
-                LLK1 <- llk0;
-                np1 <- K
-                fit0 <- res$fit
+    }
+
+    if(LogNormal){
+        out <- fit.mlnorm(x, method='lognormal',k=1)
+        xhist <- hist(x, plot=FALSE)
+
+        fit0 <- structure(list(xhist=xhist, 
+                               ng=1,p=1, mu=out$meanlog,
+                               s=out$sdlog,
+                               llk = NULL, nl = 0, nu = 0,
+                               iter = NA, ifault = NA,
+                               "AIC"=NA, "BIC"=NA,"AICc"=NA,
+                               lognormal = FALSE, c.glog=0,
+                               x.range = range(x), N = NA,K=NA,
+                               call = match.call(),
+                               trunc = FALSE),
+                          class='nmix')
+        
+        res <- structure(list(xhist=xhist, 
+                              fitted.model=fit0,
+                              fnmm = NULL,
+                              p0 = p0, p.hetero = 1.0,
+                              p.signal = p.signal,
+                              sLog = 0),
+                         class='NGS.nmix')
+    }else{
+        ## reflection is optional.  We force reflection=FALSE if p0 is
+        ## small enough.
+        
+        if(p0 < 0.25) reflect <- FALSE
+        
+        ## To stablize the mixture model estimation, we
+        ## repeat the procedue and carefully choose initial values.
+        
+        if(reflect)
+            xhist0$breaks[1] <- 2*xhist0$breaks[1]-xhist0$breaks[2]
+        
+        maxLLK <- NULL; fit0 <- NULL
+        fnmm <- list() #to store different fitted results with k components
+        LLK1 <- NULL
+        for(k in 1:7){
+            res <- .fitMM.NGS(xhist0,iter.max,k=k)
+            llk0 <- res$llk
+            if(p0>0){
+                n0 <- round(sum(xhist0$counts)/(1-p0)*p0)
+                llk0 <- llk0 + n0 * log(p0)
+            }
+            K <- res$K
+            N <- res$N
+            AIC = -2.0 * llk0 + 2.0 * K;
+            AICc = AIC + 2.0 * K * (K+1.) / (N - K - 1.0);
+            BIC = -2.0 * llk0 + log(N*2.0*pi) * K;
+            tmp <- list(fitted=res$fit,AIC=AIC,BIC=BIC,AICc=AICc)
+            fnmm[[k]] <- tmp
+            ## we choose the model that minimize AIC/BIC/AICc
+            if(length(AICc) == 0) AICc <- NA
+            if(!is.na(AICc)){
+                if(is.null(maxLLK)){
+                    np0 <- K
+                    LLK0 <- llk0;
+                    maxLLK <- AICc
+                    LLK1 <- llk0;
+                    np1 <- K;
+                    fit0 <- res$fit
+                }else if(maxLLK > AICc){
+                    maxLLK <- AICc
+                    LLK1 <- llk0;
+                    np1 <- K
+                    fit0 <- res$fit
+                }
             }
         }
+
+        ## a likelihood-ratio test for homogeneity
+        tmp <- -2 * (LLK0 - LLK1)
+        ##    cat("\nLLK1=",LLK1, "LLK0=",maxLLK,"df=",np-np1)
+        p.hetero <- pchisq(tmp, np1-np0, lower.tail=FALSE)
+        if(np0==np1) p.hetero <- 1.0
+        
+        res <- structure(list(xhist=x, 
+                              fitted.model=fit0,
+                              fnmm = fnmm, p0 = p0,
+                              p.hetero = p.hetero,
+                              p.signal = p.signal,
+                              sLog = sLog),
+                         class='NGS.nmix')
     }
-
-    ## a likelihood-ratio test for homogeneity
-    tmp <- -2 * (LLK0 - LLK1)
-    ##    cat("\nLLK1=",LLK1, "LLK0=",maxLLK,"df=",np-np1)
-    p.hetero <- pchisq(tmp, np1-np0, lower.tail=FALSE)
-    if(np0==np1) p.hetero <- 1.0
-
-    structure(list(xhist=x, 
-                   fitted.model=fit0,
-                   fnmm = fnmm,
-                   p0 = p0, p.hetero = p.hetero,
-                   sLog = sLog),
-              class='NGS.nmix')
+    res
 }
 
 .fitMM.NGS <- function(xhist, iter.max,k=5){
@@ -175,6 +302,10 @@ fit.NGS <- function(x, iter.max=30,reflect=TRUE){
     if(iter.max<10) iter.max <- 10
     for(i in 1:iter.max){
         tmp <- fit.mixnorm(xhist, k=k)
+        x.ord <- order(tmp$mu)
+        tmp$mu <- tmp$mu[x.ord]
+        tmp$s <- tmp$s[x.ord]
+        tmp$p <- tmp$p[x.ord]
         tmp2 <- cdf.nmix(tmp, xhist$breaks)
         llk2 <- sum(log(diff(tmp2$y)) * xhist$counts)
 
@@ -203,10 +334,18 @@ print.NGS.nmix <- function(x,...){
 }
 
 plot.NGS.nmix <- function(x,hist=TRUE,main=NULL,type=NULL,...){
-    out <- pdf.NGS.nmix(x)
+    if(is.null(x$fnmm)){
+        a <- x$fit$x.range[1]
+        b <- x$fit$x.range[2]+1
+        x0 <- seq(a, b, length=401)
+        y0 <- dlnorm(x0, x$fit$mu, x$fit$s)
+        out <- list(x=x0, y=y0)
+    }else{
+        out <- pdf.NGS.nmix(x)
+    }
     
     if(hist){
-        plot(x$xhist,main=main,...)
+        plot(x$xhist,main=main,freq=FALSE,...)
         lines(out)
     }else{
         plot(out, main=main,type='l',...)
@@ -214,7 +353,15 @@ plot.NGS.nmix <- function(x,hist=TRUE,main=NULL,type=NULL,...){
 }
 
 lines.NGS.nmix <- function(x,...){
-    out <- pdf.NGS.nmix(x)
+    if(is.null(x$fnmm)){
+        a <- x$fit$x.range[1]
+        b <- x$fit$x.range[2]+1
+        x0 <- seq(a, b, length=401)
+        y0 <- dlnorm(x0, x$fit$mu, x$fit$s)
+        out <- list(x=x0, y=y0)
+    }else{
+        out <- pdf.NGS.nmix(x)
+    }
     lines(out,...)
 }
 
@@ -436,7 +583,7 @@ normalize.NGS <- function(x,y, method="mixture"){
         for(i in 1:nrow(xy)){
             ##            cat("\n record #:", i)
             xtmp <- as.numeric(xy[i,]);
-            fx <- fit.lognormal(xtmp,lmts)
+            fx <- fit.mlnorm(xtmp)
             xbar <- c(xbar, fx$Mean)
         }
         xy.mean <- xbar
@@ -481,434 +628,9 @@ normalize.NGS <- function(x,y, method="mixture"){
     x0 <- seq(min(xy), max(xy), length=401)
     Fx <- lapply(x0, FUN=.ecdf,y=x)
     Fy <- lapply(x0, FUN=.ecdf,y=y)
-    D <- abs(max(as.numeric(Fy)-as.numeric(Fx)))
+    D <- max(abs(as.numeric(Fy)-as.numeric(Fx)))
 }
 
-    
-perm.test.NGS <- function(x,y, alternative = "two.sided", iter = 1001){
-    xnam <- deparse(substitute(x))
-    ynam <- deparse(substitute(y))
-    nam = paste(xnam, "(", length(x), ") vs ",
-                ynam, "(", length(y), ")")
-    if (!is.numeric(x) && !is.complex(x) && !is.logical(x)) {
-        warning("'x' is not numeric or logical: returning NA")
-        return(NA_real_)
-    }
-    x <- x[!is.na(x)]
-    if (!is.numeric(y) && !is.complex(y) && !is.logical(y)) {
-        warning("'y' is not numeric or logical: returning NA")
-        return(NA_real_)
-    }
-    y <- y[!is.na(y)]
-    
-    alternative = match.arg(tolower(alternative),
-                            c("one.sided", "two.sided"))
-    fun = .ecdfdiff
-    D = fun(x, y)
-    rfun <- function(x, y) {
-        nx = length(x)
-        ny = length(y)
-        n = nx + ny
-        n0 = sample(n)
-        xy = c(x, y)
-        fun(xy[n0[1:nx]], xy[n0[(nx + 1):n]])
-    }
-    
-    bar <- function(n, x, y)
-        replicate(n, rfun(x = x, y = y))
-
-    z = bar(iter, x = x, y = y)
-    p1 <- mean(abs(D) <= abs(z))
-    p2 <- mean(D <= z)
-    p2 <- min(p2, 1-p2)
-    pv = switch(alternative, two.sided = p1, 
-                one.sided = p2, stop("Wrong test type!"))
-
-    RVAL <- list(statistic = c(D = D),
-                 p.value = pv, p1=p1, p2=p2,
-                 method = "Permutation test for NGS data", 
-                 data.name = nam)
-    class(RVAL) <- "htest"
-    return(RVAL)
-}
-
-###  Fitting Copula 09/29/2017 ##################################
-## Creates the grid counts from a bivariate data set X
-## over an equally-spaced set of grid points
-## contained in "gpoints" using the linear
-## binning strategy. Note that the FORTRAN subroutine
-## "lbtwod" is called.
-.bin2D <- function(X, gpoints1, gpoints2)
-{
-    n <- nrow(X)
-    X <- c(X[, 1L], X[, 2L])
-    M1 <- length(gpoints1)-1
-    M2 <- length(gpoints2)-1
-    g1 <- gpoints1
-    g2 <- gpoints2
-    out <- .Fortran(.F_bintwod, as.double(X), as.integer(n),
-                    as.double(g1[-1]), as.double(g2[-1]), 
-                    as.integer(M1), as.integer(M2),
-                    M = double(M1*M2))
-    matrix(out$M, M1, M2)
-}
-
-.binshrink <- function(xg,xc,k=5){
-    while(length(xc) > k){
-        l <- length(xc)
-        m <- which(xc == min(xc))[1L]
-        if(m == 1){
-            xc[2] <- xc[2] + xc[m];
-            xg <- xg[-(m+1)]
-        }else if(m == l){
-            xc[m-1] <- xc[m-1] + xc[m]
-            xg <- xg[-m]
-        }else{
-            if(xc[m-1] > xc[m+1]){
-                xc[m+1] <- xc[m+1] + xc[m]
-                xg <- xg[-(m+1)]
-            }else{
-                xc[m-1] <- xc[m-1] + xc[m]
-                xg <- xg[-m]
-            }
-        }
-        xc <- xc[-m]
-    }
-    list(grid=xg, counts=xc)
-}
-
-.mixnorm2d <- function(Fx,Fy, Psi){
-    stopifnot(Psi > 0)
-    Sxy <- 1 + (Fx+Fy)*(Psi-1)
-    if(Psi==1){
-        Hxy <- Fx * Fy
-    }else{
-        Hxy <- 0.5 * (Sxy-sqrt(Sxy^2-4*Psi*(Psi-1)*Fx*Fy))/(Psi-1);
-    }    
-    Hxy
-}
-
-fit.nmix.copula <- function(x,y,mle.large=FALSE){
-    ## must turn mixed off otherwise will have trouble to compute the
-    ## copula -- f(0,0) needs to be redefined.
-    N <- length(x)
-    stopifnot(length(y)==N)
-    xfit <- fit.NGS(x)
-    yfit <- fit.NGS(y)
-    
-    nbinx <- length(xfit$xhist$xhist$counts)
-    nbiny <- length(yfit$xhist$xhist$counts)
-    xgrid <- xfit$xhist$xhist$breaks
-    ygrid <- yfit$xhist$xhist$breaks
-    xcount <- xfit$xhist$xhist$counts
-    ycount <- yfit$xhist$xhist$counts
-    ## transform raw data such that the zero's will be grouped
-    ## correctly.
-    lx <- log(x); ly <- log(y)
-    xmin <- min(c(x[x>0],y[y>0]))*.25
-    if(xfit$p0>0){
-        lx[x==0] <- log(xmin)
-    }
-    if(yfit$p0>0){
-        ly[y==0] <- log(xmin)
-    }
-
-    ngroup <- 5
-    mat2d.large <- .bin2D(cbind(lx,ly), xgrid, ygrid)
-    xgrid2 <- .binshrink(xgrid,xcount,k=ngroup)$grid
-    ygrid2 <- .binshrink(ygrid,ycount,k=ngroup)$grid
-    mat2d.small <- .bin2D(cbind(lx,ly), xgrid2, ygrid2)
-
-    ## rough estimates of Psi
-    nr <- nrow(mat2d.small)
-    nc <- ncol(mat2d.small)
-    psis <- NULL
-    for(i in 1:(nr-1)){
-        a <- sum(mat2d.small[1:i,1:i])
-        b <- sum(mat2d.small[1:i,(i+1):nc])
-        c <- sum(mat2d.small[(i+1):nr,1:i])
-        d <- sum(mat2d.small[(i+1):nr,(i+1):nc])
-        tmp <- a * c
-        if(tmp==0){
-            out <- 1000
-        }else{
-            out <- a*d/tmp
-        }
-        psis <- c(psis, out)
-    }
-
-    ##  Compute and save fx, fy, Fx and Fy 
-    Fx <- rep(0, ngroup+1)
-    Fy <- rep(0, ngroup+1)
-    for(i in 1:(ngroup+1)){
-        Fx[i] <- pmixnorm(xgrid2[i],xfit$fit$p,xfit$fit$mu,xfit$fit$s)
-        Fy[i] <- pmixnorm(ygrid2[i],yfit$fit$p,yfit$fit$mu,yfit$fit$s)
-    }
-
-    ## grid search for Psi 
-    psis1 <- seq(0.1*max(0.01,min(psis)), 10*max(psis), length=100)
-    psis2 <- seq(11*max(psis), 1000*max(psis), length=200)
-    psis <- c(psis1, psis2)
-    Chi2 <- NULL
-    LLK <- NULL
-    for(psi in psis){
-        ecounts <- matrix(0,nrow=ngroup,ncol=ngroup)
-        for(i in 1:ngroup){
-            for(j in 1:ngroup){
-                a <- Fx[i]
-                b <- Fx[i+1]
-                c <- Fy[j]
-                d <- Fy[j+1]
-                Hbd <- .mixnorm2d(b,d,psi)
-                Had <- .mixnorm2d(a,d,psi)
-                Hbc <- .mixnorm2d(b,c,psi)
-                Hac <- .mixnorm2d(a,c,psi)
-                ecounts[i,j] <- Hbd - Had - Hbc + Hac
-            }
-        }
-        llk <- sum(mat2d.small*log(ecounts), na.rm=TRUE)
-        ecounts <- N*ecounts
-        
-        chistat <- sum((mat2d.small-ecounts)^2/ecounts)
-        Chi2 <- c(Chi2, chistat)
-        LLK <- c(LLK, llk)
-    }
-    df0 <- ngroup^2 - 3*(xfit$fit$ng+yfit$fit$ng) - 2
-    if(df0<1) df0 <- 1
-
-    sele1 <- which(Chi2 == min(Chi2))[1]
-    sele2 <- which(LLK == max(LLK))[1]
-    ## Compute MLE using the large matrix.  This need to be tuned off.
-    ## Otherwise, we need to compute using Fortran or C code for large
-    ## data analysis.
-    if(mle.large){
-        ##  Compute and save fx, fy, Fx and Fy
-        ng1 <- nrow(mat2d.large)
-        ng2 <- ncol(mat2d.large)
-        Fx <- rep(0, ng1+1)
-        Fy <- rep(0, ng2+1)
-        for(i in 1:(ng1+1)){
-            Fx[i] <- pmixnorm(xgrid[i],xfit$fit$p,xfit$fit$mu,xfit$fit$s)
-        }
-        for(i in 1:(ng2+1)){
-            Fy[i] <- pmixnorm(ygrid[i],yfit$fit$p,yfit$fit$mu,yfit$fit$s)
-        }
-        
-        LLK2 <- NULL
-        for(psi in psis){
-            ecounts <- matrix(0,nrow=ng1,ncol=ng2)
-            for(i in 1:ng1){
-                for(j in 1:ng2){
-                    a <- Fx[i]
-                    b <- Fx[i+1]
-                    c <- Fy[j]
-                    d <- Fy[j+1]
-                    Hbd <- .mixnorm2d(b,d,psi)
-                    Had <- .mixnorm2d(a,d,psi)
-                    Hbc <- .mixnorm2d(b,c,psi)
-                    Hac <- .mixnorm2d(a,c,psi)
-                    ecounts[i,j] <- Hbd - Had - Hbc + Hac
-                }
-            }
-            llk <- sum(mat2d.large*log(ecounts), na.rm=TRUE)
-            LLK2 <- c(LLK2, llk)
-        }
-        sele3 <- which(LLK2 == max(LLK2))[1]
-        psi.mle.large <- psis[sele3]
-    }else{
-        psi.mle.large <- NULL
-        LLK2 <- NULL
-    }
-    
-    structure(list(xfit=xfit, yfit=yfit,
-                   Psi.chisq = psis[sele1],
-                   Psi.mle.small = psis[sele2],
-                   Psi.mle.large = psi.mle.large,
-                   p.value = 1-pchisq(Chi2[sele1], df0),
-                   Psis = psis,
-                   ChiSq = Chi2,
-                   df=df0,
-                   LLK.small=LLK,
-                   LLK.large=LLK2,
-                   mat2large=mat2d.large,
-                   mat2small=mat2d.small),
-              class='NGS.nmix.copula')
-}
-
-print.NGS.nmix.copula <- function(x,...){
-    cat("\nFinite normal mixture model for 'x'\n")
-    print(x$xfit)
-    cat("\nFinite normal mixture model for 'y'\n")
-    print(x$yfit)
-    cat("\nPsi estimates:\n")
-    cat("\tChiSq est=",x$Psi.chisq, "\n\tMLE=",x$Psi.mle.small,"\n")
-}
-
-plot.NGS.nmix.copula <- function(x,...){
-    persp(x$mat2large)
-}
-
-.lnormllk <- function(parms,x,x.limits)
-{
-    if(!is.finite(parms[1])) parms[1] <- 1
-    if(!is.finite(parms[2])) parms[2] <- 1
-    if(is.na(parms[1])) parms[1] <- 1
-    if(is.na(parms[2])) parms[2] <- 1
-    dF <- plnorm(x+x.limits, meanlog=parms[1],
-                 sdlog=parms[2], log.p = FALSE) -
-        plnorm(x, meanlog=parms[1],
-               sdlog=parms[2], log.p = FALSE)
-    sele1 <- dF > 0
-    sele2 <- is.finite(dF)
-    logl <- sum(log(dF[sele1&sele2]))
-    dF <- dlnorm(x,meanlog=parms[1],
-                 sdlog=parms[2], log=TRUE)
-    sele2 <- is.finite(dF)
-    logl <- logl + sum(dF[sele2])
-    -logl                         # return negative log likelihood
-}
-
-    
-.lnorm <- function(parms, x) {
-    sele <- x == 0
-    if(sum(sele) == length(x)){
-        res <- NA
-    }else{
-        n1 <- sum(sele) # model zero-measures separately
-        lx <- log(x[!sele])
-        llk1 <- n1*dnorm(min(lx),parms[1], parms[2])
-        ## check whether there are extreme outliers
-        q3 <- as.numeric(quantile(lx, prob=0.75))
-        sele <- lx > q3 + 2.0 * IQR(lx)
-        if(any(sele)){
-            llk3 <- sum(sele)*
-                pnorm(max(lx[!sele]),parms[1], parms[2],
-                      lower.tail=FALSE,log.p=TRUE)
-            llk2 <- sum(dnorm(lx[!sele],parms[1],parms[2],log=TRUE))
-            llk2 <- llk2 + llk3
-        }else{
-            llk2 <- sum(dnorm(lx,parms[1],parms[2],log=TRUE))
-        }
-        
-        res <- -llk1-llk2
-    }
-    res
-}
-
-fit.lognormal <- function(x,x.limits){
-    xnam = deparse(substitute(x))
-    x <- as.numeric(x)
-    nx <- length(x)
-    nx0 <- sum(x==0)
-    if(any(x<0)) stop("negative 'x' found")
-    ## initialize the output variables
-    x0 <- seq(min(x),max(x), length=401)
-    ## unadjusted mean and sd of sample
-    mu0 <- mean(x); s0 <- sd(x)
-
-    if(missing(x.limits)){
-        x.lmts <- x.limits <- rep(0, nx)
-    }else{
-        if(any(x.limits < 0)) stop("non-positive 'x.limits' found")
-        stopifnot(nx == length(x.limits))
-        sele <- x == 0
-        p0 <- mean(sele)
-        x.lmts <- x.limits
-        x.lmts[sele] <- x.lmts[sele] * (1-p0)
-    }
-        
-    ##adjusted mean and sd of sample
-    yhat <- x + 0.5*x.lmts
-    y.mean <- mean(yhat)
-    y.median <- median(yhat)
-    mu1 <- y.mean; s1 <- sd(yhat)
-    
-    ## perform an exact test using binomial distribution to test
-    ## whether the positive measures are random (by chance) as results
-    ## of measurement errors and others.
-    pv <- pbinom(nx0,size=nx, prob=0.5, lower.tail = FALSE)
-
-    ## for the zero measures (after adjusted for the measurement
-    ## errors due to sensitivity of the platform/technology), we add
-    ## random positive noise and obtain MLE for lognormal
-    ## distribution.  If a gene is noweakly expressed, we approximate
-    ## using such MLEs.  If a gene is positively measured, we use such
-    ## MLEs as initial values to fit lognormal distribution based on
-    ## pre-binned data.
-    sele <- yhat <= 0
-    n0 <- sum(sele)
-    if(n0 > 0){
-        yhat[sele] <- runif(n0, 0, 0.1) # 0.1 is chosen arbitrarily
-    }
-    ly <- log(yhat)
-    mu.mle <- mean(ly)
-    sd.mle <- mean((ly-mu.mle)^2)
-    ## initialize the estimates
-    mu.est <- mu.mle
-    sd.est <- sd.mle
-    
-    ## we setup a cutoff of 0.001.  If pv<0.001, we conclude the gene
-    ## expression is weak (undetectable, not significantly different
-    ## from zero, ...) and we simply estimate the lognoraml parameters
-    ## using the MMEs.
-
-    if(pv >= 0.005/nx){
-        tmp <- optim(c(mu.mle, sd.mle), .lnorm, NULL,
-                     method="L-BFGS-B",
-                     lower=c(0.1*mu.mle,0.1*sd.mle),
-                     upper=c(10*mu.mle,10*sd.mle),
-                     x = x)
-        mu.est <- tmp$par[1];
-        sd.est <- tmp$par[2];
-    }
-
-    ## goodness-of-fit test using chisq-test
-    xbreaks <- qlnorm(c(0.2,0.4,0.6,0.8),
-                      meanlog=mu.est, sdlog=sd.est)
-    xbreaks <- c(0,xbreaks,Inf)
-    xhist <- hist(x, breaks=xbreaks,plot=FALSE)
-    x1 <- xhist$counts
-    y1 <- rep(round(nx*0.2),5)
-    p.gof <- chisq.test(cbind(x1,y1))$p.value
-
-    y0 <- dlnorm(x0,meanlog=mu.est,sdlog=sd.est,log=FALSE)
-    MU <- exp(mu.est+0.5*sd.est^2)
-    SD <- sqrt((exp(sd.est^2)-1)*exp(2*mu.est+sd.est^2))
-
-    structure(list(
-        data = x,
-        x.name = xnam,
-        x=x0, y=y0, size=c(nx,nx0),
-        meanlog = mu.est, sdlog = sd.est,
-        p.value = pv, p.gof = p.gof,
-        xbar=mu0, s=s0,
-        Mean = MU, SD = SD,
-        xbar.adj=mu1, s.adj=s1),
-        class='NGS.lognormal')
-}
-
-plot.NGS.lognormal <- function(x,...){
-    hist(x$data, nclass=30, prob=TRUE)
-    lines(x, ...)
-}
-
-print.NGS.lognormal <- function(x,...){
-    cat("\nFitting lognormal distribution to data '",x$x.name,"'",sep='')
-    cat("\n\nSummaries:\n")
-    tmp1 <- c(x$Mean,x$SD)
-    tmp2 <- c(x$xbar,x$s)
-    tmp3 <- c(x$xbar.adj,x$s.adj)
-    tmp <- data.frame(MLE=tmp1, raw=tmp2, adj=tmp3)
-    row.names(tmp) <- c("Mean","Std.Dev")
-    print(tmp, digits=3)
-    cat("\n n.obs =", x$size[1], ", n.zero =", x$size[2])        
-    cat("\n Parameter estimates: meanlog =",
-        round(x$meanlog,3), ", sdlog =",
-        round(x$sdlog,3), "\n GOF-test, p-value =",
-        round(x$p.gof,4))
-    cat("\n mean>0 (detectable expression level), p-value =",
-        round(x$p.value,4),"\n")
-}
 
 
 ### DEG test
@@ -919,8 +641,8 @@ print.NGS.lognormal <- function(x,...){
     x2 <- x[sele]; y2 <- x[-sele]
     nx <- size; ny <- n-nx
     lmts.x <- y[sele]; lmts.y <- y[-sele]
-    fit.x <- fit.lognormal(x2, lmts.x)
-    fit.y <- fit.lognormal(y2, lmts.y)
+    fit.x <- fit.mlnorm(x2)
+    fit.y <- fit.mlnorm(y2)
     ## t.test
     dmu <- fit.x$meanlog-fit.y$meanlog
     se <- sqrt((fit.x$sdlog)^2/nx+(fit.y$sdlog)^2/ny)
@@ -991,8 +713,8 @@ deg.NGS <- function(x,y, gene,iter=1001){
 
     Control <- x2
     Treat <- y2
-    fit.x <- fit.lognormal(Control, lmts.x)
-    fit.y <- fit.lognormal(Treat, lmts.y)
+    fit.x <- fit.mlnorm(Control)
+    fit.y <- fit.mlnorm(Treat)
     ## t.test
     dmu <- fit.x$meanlog-fit.y$meanlog
     se <- sqrt((fit.x$sdlog)^2/nx+(fit.y$sdlog)^2/ny)
@@ -1006,8 +728,8 @@ deg.NGS <- function(x,y, gene,iter=1001){
     ##    pv2 <- mean(abs(tmp)>abs(tstat))
     ##    pv3 <- mean(tstat < tmp)
     ##    pv3 <- min(pv3, 1-pv3)
-    tmp <- perm.test.NGS(x=x,y=y,iter=iter)
-    pv2 <- tmp$p1; pv3 <- tmp$p2;
+    tmp <- .permtest0(x=x,y=y,iter=iter)
+    pv2 <- tmp$pv; pv3 <- NA;
     structure(list(gene=gene.name,
                    x.name = xnam, y.name = ynam,
                    fit.x=fit.x, fit.y=fit.y,
@@ -1072,3 +794,4 @@ plot.NGS.test <- function(x,main=NULL,...){
         }
     }
 }
+

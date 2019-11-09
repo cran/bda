@@ -1,13 +1,13 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{gof}
-\alias{gof}
-\alias{gof.default}
-\alias{gof.bdata}
-\alias{gof.histogram}
-\alias{gof.FMKL}
-\alias{gof.GB}
+\name{gof.test}
+\alias{gof.test}
+\alias{gof.test.default}
+\alias{gof.test.bdata}
+\alias{gof.test.histogram}
+\alias{gof.test.FMKL}
+\alias{gof.test.GB}
 
 \encoding{UTF-8}
 
@@ -18,7 +18,7 @@
 }
 
 \usage{
- gof(x, dist, pars, method='ks')
+ gof.test(x, dist, pars, method='ks')
 }
 
 \arguments{
@@ -35,7 +35,7 @@
   data(hhi)
   hmob <- binning(counts=hhi$mob, breaks=hhi$breaks)
   lmd5 <- fit.GLD.FMKL(hmob)
-  gof(lmd5)
+  gof.test(lmd5)
 
 }
 \keyword{distribution}

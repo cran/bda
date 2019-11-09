@@ -17,13 +17,16 @@
 }
 
 \usage{
- fit.GLD.FMKL(x, lbound, ubound, percentile='exact', mle=FALSE)
+ fit.GLD.FMKL(x, qtl, qtl.levels, lbound, ubound,
+              percentile='exact', mle=FALSE)
  fit.GLD(x, lbound, ubound, method='chisquare')
 }
 
 \arguments{
   \item{x}{A vector of raw data, or a histogram or binned data.}
-
+  \item{qtl,qtl.levels}{vectors. Five quantiles and quantile levels
+  to fit GLD using method of percentiles. If missing, the exact or
+  approximate quantiles will be determined depending on the data.}
   \item{percentile}{Use the exact percentiles (\code{exact}) 
   or approxiated values (\code{approximate}).}
 

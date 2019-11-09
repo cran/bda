@@ -286,16 +286,14 @@ lpsmooth.bdata <-
 
 .histonpr <- function(x,from,to,gridsize,conf.level=0.95)
     {
-        if(!x$equalwidth)
-            stop("Not applicable for unequal width bins")
         if(missing(conf.level)) conf.level <- 0.95
         
-        xhist <- x
-        mcounts <- mean(x$counts)
-        if(mcounts > 50)
-            x <- .split(x,k=2)
-        else if(mcounts > 100)
-            x <- .split(x, k=3)
+#        xhist <- x
+#        mcounts <- mean(x$counts)
+#        if(mcounts > 50)
+#            x <- .split(x,k=2)
+#        else if(mcounts > 100)
+#            x <- .split(x, k=3)
         
         F <- x$counts;
         X <- x$mids;
@@ -314,16 +312,32 @@ lpsmooth.bdata <-
         ##            adaptive = 0  # don't use adaptive bandwidth selector
         ##        }
 
-        if(missing(from)) from <- a - 3*bw
-        if(missing(to)) to <- b + 3*bw
+        if(missing(from)) from <- a#min(X)#a - 3*bw
+        if(missing(to)) to <- b#max(X)#b + 3*bw
         stopifnot(to > from)
 
         if(missing(gridsize)) gridsize <- 512L
         stopifnot(gridsize > 10)
         ##  root-transformation
-        Y = sqrt(nbin/n*(F+0.25))
+        if(!x$equalwidth){
+            ##stop("Not applicable for unequal width bins")
+            wd <- diff(x$breaks)
+            wdmean <- mean(wd)
+            Y <- sqrt(nbin/n*(F*wdmean/wd+0.25))
+        }else{
+            Y <- sqrt(nbin/n*(F+0.25))
+        }
+        ## add two more points on the two sides for the boundary
+        ## effects
+        tmp <- sqrt(nbin/n*0.5)
+        Y <- c(tmp, Y, tmp)
+        tmp <- diff(X)
+        X <- c(X[1]-tmp[1], X, max(X)+rev(tmp)[1])
+        
         ##print(x$counts)
-        ## call npr(...) to estimate the nonparametric regression function
+        
+        ## call npr(...) to estimate the nonparametric regression
+        ## function
         out <- lpsmooth(y=Y, x=X, bw=bw, sd.y= 0.5*sqrt(nbin/n),
                    from=from, to=to, gridsize=gridsize,
                    conf.level=conf.level)

@@ -3,19 +3,26 @@
 
 \name{deg.NGS}
 \alias{deg.NGS}
+\alias{deg.test}
 \alias{print.NGS.test}
 \alias{plot.NGS.test}
+\alias{print.DEG}
+\alias{plot.DEG}
 
 \title{A test of DEG detection}
 \description{
  To test whether a gene differentially expressed in two experiments.}
 \usage{
   deg.NGS(x,y, gene,iter=1001)
+  deg.test(normal.x, normal.y,counts.x, counts.y, gene,weights.x, weights.y)
 }
 \arguments{
   \item{x,y}{Two data files}
+  \item{counts.x, counts.y}{Counts data files}
+  \item{normal.x, normal.y}{Normalized data files}
   \item{iter}{maximum iteration to find the optimal fit.}
   \item{gene}{name of gene to be tested}
+  \item{weights.x, weights.y}{weights}
 }
 
 \author{

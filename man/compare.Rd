@@ -6,6 +6,7 @@
 \alias{compare.default}
 \alias{compare.matrix}
 \alias{compare.data.frame}
+\alias{compare.NGS.lognormal}
 \alias{print.comp}
 
 \title{Compare two or more samples}

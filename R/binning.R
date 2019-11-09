@@ -305,19 +305,19 @@ print.bdata <- function(x,...){
     cat("  Finite limits: ", x$top.coded==0,
         "; equal bw: ", x$equalwidth,
         "\n", sep="")
-    res <- .summary.bdata(x)
-    cat("  Mean = ", res$mean, "\tMedian = ", res$median,
-        "\tSD = ", round(sqrt(res$var),3),
-        ")\n", sep = "")
-    cat("  Quantiles (approximate):\n")
-    tmp <- res$approx$qtls
-    names(tmp) <- round(res$approx$levels,4)
-    print(tmp)
+#    res <- .summary.bdata(x)
+#    cat("  Mean = ", res$mean, "\tMedian = ", res$median,
+#        "\tSD = ", round(sqrt(res$var),3),
+#        ")\n", sep = "")
+#    cat("  Quantiles (approximate):\n")
+#    tmp <- res$approx$qtls
+#    names(tmp) <- round(res$approx$levels,4)
+#    print(tmp)
     
-    cat("  Quantiles (exact):\n")
-    tmp <- res$exact$qtls
-    names(tmp) <- round(res$exact$levels, 4)
-    print(tmp)
+#    cat("  Quantiles (exact):\n")
+#    tmp <- res$exact$qtls
+#    names(tmp) <- round(res$exact$levels, 4)
+#    print(tmp)
 
     lbs <- paste("(", x$breaks[-(x$nclass+1)],",  ",
                  x$breaks[-1], "]", sep="")

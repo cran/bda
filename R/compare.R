@@ -25,16 +25,90 @@ print.comp <- function(x,...){
     invisible(x)
 }
 
-compare <- function(y, x, var.name,
-                    alternative = c("two.sided", "less", "greater"),
-                    paired = FALSE, 
-                    conf.level = 0.95, ...)
-    UseMethod("compare")
+compare <-
+    function(y, x, var.name,
+             alternative = c("two.sided", "less", "greater"),
+             paired = FALSE, 
+             conf.level = 0.95, ...)
+        UseMethod("compare")
 
-compare.matrix <- function(y, x, var.name,
-                           alternative = c("two.sided", "less", "greater"),
-                           paired = FALSE, 
-                           conf.level = 0.95, ...)
+compare.NGS.lognormal <-
+    function(y,x,var.name,
+             alternative = c("two.sided", "less", "greater"),
+             paired = FALSE, 
+             conf.level = 0.95, ...)
+{
+    if(class(x) != "NGS.lognormal")
+        stop("'x' has different class type as 'y'")
+    xnam = deparse(substitute(x))
+    ynam = deparse(substitute(y))
+    aic <- c(0,0)
+    aicc <- c(0,0)
+    bic <- c(0,0)
+    nx <- x$n; kx <- x$npara
+    ny <- y$n; ky <- y$npara
+    aic[1] <- 2*ky - 2*y$llk
+    aic[2] <- 2*kx - 2*x$llk
+    aicc[1] <- aic[1] + 2*ky*(1+ky)/(ny-ky-1) 
+    aicc[2] <- aic[2] + 2*kx*(1+kx)/(nx-kx-1) 
+    bic[1] <- log(ny)*ky-2*y$llk
+    bic[2] <- log(nx)*kx-2*x$llk
+    res <- data.frame(AIC=aic, AICc=aicc,BIC=bic,
+                      NPar=c(y$npara, x$npara))
+    row.names(res) <- c(ynam, xnam)
+    print(res)
+    ## The test statistic (often denoted by D) is twice the log of the
+    ## likelihoods ratio. Where the null hypothesis represents a
+    ## special case of the alternative hypothesis, the probability
+    ## distribution of the test statistic is approximately a
+    ## chi-squared distribution with degrees of freedom equal to
+    ## {\displaystyle df_{\text{alt}}-df_{\text{null}}} {\displaystyle
+    ## df_{\text{alt}}-df_{\text{null}}},[8] respectively the number
+    ## of free parameters of models alternative and null.
+    D <- -2*(x$llk - y$llk)
+    DF <- y$npara-x$npara
+    if(DF ==0){
+        cat("\nNull hypothesis:", xnam)
+        cat("\nAlternative hypothesis:", ynam)
+        cat("\nThe two models have the same DF\n")
+        if(bic[1]<bic[2]){
+            out <- y
+        }else{
+            out <- x
+        }
+    }else if(DF > 0){
+        cat("\nNull hypothesis:", xnam)
+        cat("\nAlternative hypothesis:", ynam)
+        cat("\nTest statistic D =",signif(D,3))
+        cat(", d.f. =", DF)
+        p.v <- pchisq(D, abs(DF),lower.tail=FALSE)
+        cat("\np.value =",signif(p.v,4),"\n")
+        if(p.v < 0.05){
+            out <- y
+        }else{
+            out <- x
+        }
+    }else{
+        cat("\nNull hypothesis:", ynam)
+        cat("\nAlternative hypothesis:", xnam)
+        cat("\nTest statistic D =",signif(-D,3))
+        cat(", d.f. =", -DF)
+        p.v <- pchisq(-D, abs(DF), lower.tail=FALSE)
+        cat("\np.value =",signif(p.v,4),"\n")
+        if(p.v < 0.05){
+            out <- x
+        }else{
+            out <- y
+        }
+    }
+    invisible(out)
+}
+
+compare.matrix <-
+    function(y, x, var.name,
+             alternative = c("two.sided", "less", "greater"),
+             paired = FALSE, 
+             conf.level = 0.95, ...)
 {
     warning("The matrix will be analyzed by columns...")
     y <- as.data.frame(y)
@@ -199,7 +273,7 @@ compare.data.frame <- function(y, x, var.name,
         out <- NA
     }else{
         if(any(x<30)){
-            out <- fisher.test(x)$p.value
+            out <- fisher.test(x,simulate.p.value=TRUE)$p.value
         }else{
             out <- chisq.test(x)$p.value
         }
@@ -358,7 +432,7 @@ compare.default <- function(y, x, var.name,
 
     tmp <- chisq.test(x)
     pv <- c(pv,tmp$p.value)
-    tmp <- fisher.test(x)
+    tmp <- fisher.test(x,simulate.p.value=TRUE)
     pv <- c(pv,tmp$p.value)
 
     if(ncol(x)==2){

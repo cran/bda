@@ -1,24 +1,36 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{fit.lognormal}
+\name{fit.mlnorm}
+\alias{fit.mlnorm}
+\alias{fit.blnorm}
 \alias{fit.lognormal}
 \alias{print.NGS.lognormal}
 \alias{plot.NGS.lognormal}
+\alias{lines.NGS.lognormal}
+\alias{print.lnmix}
+\alias{plot.lnmix}
+\alias{lines.lnmix}
 
 \title{Fit a log-normal distribution to (binned) NGS data}
 \description{
    Fit a log-normal distribution to (binned) NGS data
    }
 \usage{
-  fit.lognormal(x, x.limits)
+  fit.mlnorm(x, method="mixed", k=1, gridsize=1000,optim=TRUE)
+  fit.lognormal(x, method='mle')
 }
 \arguments{
   \item{x}{Next-Generation Sequencing data or similar.
   Could have a lot of zeros but negative values are not
   allowed}
-  \item{x.limits}{a low threshold of a non-zero measure which
-  depends on a specific experiment.}
+  \item{method}{choose fitting method. For fit.mlnorm, options include
+  "Monte Carlo method", and "Maximum Likelihood method". 
+  For fit.lognormal, two options: 'mle' or 'percentile' -- percentile
+  matching method.}
+  \item{gridsize}{size of grid where densities will be evaluated.}
+  \item{k}{Number of components.}
+  \item{optim}{Choose the best model if 'true'.}
 }
 
 \author{

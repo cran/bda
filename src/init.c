@@ -9,7 +9,11 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
+// ckernel.c
+void orexactl(int *counts, double *alpha, double *out);
+void orexactu(int *counts, double *alpha, double *out);
 
+//Fkernel.f
 void F77_SUB(linbin)(double *x, int *n, double *a, double *b,
 		     int *m, int *trun, double *gcounts);
 
@@ -21,12 +25,51 @@ void F77_SUB(bintwod)(double *x, int *n, double *g1,
 		      double *g2, int *m1,
 		      int *m2, double *gcounts);
 
-void F77_SUB(iterfx)(double *fx, double x0, int *n, double *x,
-		     double *f, int m,
-		     double *w, double *h, double *iter);
+void F77_SUB(iterfx)(double *fx, double *x0, int *n, double *x,
+		     double *f, int *m,
+		     double *w, double *h, int *iter);
+
+void F77_SUB(smoothkde)(double *fx, double *x0, int *n, 
+			double *x,  double *f, int *m,
+			double *w, double *h, int *iter);
 		    
 void rootGldFmklBisection(double *q, double *lambdas);
 void KSPvalue(double *x0);
+void KSP2x(double *x0, int *n);
+void pks2(double *x0, int *m, int *n);
+
+// permtest.c
+void permtest(double *x, int *nx,  double *y, int *ny,
+	      double *a, double *b,
+	      double *D, double *pv, int *iter);
+void permtest2(double *D, int *M, int *nx, int *ny,
+	       int *F, int *iter);
+void permtest3(double *xy, int *nx, int *ny, double *pv, int *iter);
+
+// em.c
+void em3(int *size, double *x, double *pars, double *tol);
+
+//lognormal.c
+
+void lnormBinChisq(int *size, double *x, double *fn, 
+		   double *mu, double *s);
+
+void lnormBinMLE(int *size, double *x, double *fn, 
+		 double *mu, double *s);
+
+void mclnorm(double *x, double *fn, int *size,
+	     double *mu, double *s);
+
+void mclnorm2(double *x, double *fn, double *delta,
+	      int *size, double *mu, double *s);
+
+void mleTN(double *x, double *d, double *f, int *size,
+	   double *xp, double *qp, double *s);
+
+void mlemixTN(double *x, double *d, double *f, int *size,
+	      double *xp, double *qp, double *s, double *pmix, int *k);
+
+void qtlmlnorm(double *x, int *k, double *p, double *mu, double *s);
 
 // lprsmooth.c
 void tubecv(double *kappa, double *level);
@@ -44,16 +87,20 @@ void F77_SUB(emmix)(int *y, int *ny, int *ng,
 		    double *xlogl, int *wk, 
 		    int *itrunc, int *nl, int *nu);
 
-		   //smoothkde.f
-void F77_SUB(smoothkde)(double *fx, double x0, int *n, 
-			double *x,  double *f, int m,
-			double *w, double *h, int *iter);
 
 //  KernelWKDE.c  
 void BDMLE(double *f, double *a, double *b, int *nbin,
 	   double *pars, int *npar, int *dist);
 void bdregmle(double *F, double *x,double *freq, 
 	      int *nu, int *n, int *dist, double *pars);
+
+//  Pareto.c  
+void qmPareto(double *p, double *q, int *n,
+	      double *xm, double *alpha);
+void mle1Pareto(double *cnts, double *b, int *nclass,
+		double *xm, double *alpha);
+void mle2Pareto(double *cnts, double *b, int *nclass,
+		double *xm, double *alpha);
 
 //  cbootkde.c/fbootkde.f
 void hbmise(double *x, double *f, double *h, int *n, double *hopt);
@@ -62,23 +109,13 @@ void F77_SUB(ofcpdf)(double *y, double *f,double *a, double *b,
 void F77_SUB(remp)(int *n,double *y,double *f, double *a, double *b,
 		   int *m, double *Fx, double *x, double *u, int *ntotal);
 
-		  
-void F77_SUB(nrlogit)(double *x0, double *betas, double *ps, int *n);
-void ppower(double *p0, int *gsize, double *esize, double *alpha,
-	    int *ssize, double *pwr);
-
-void orexactl(int *counts, double *alpha, double *out);
-void orexactu(int *counts, double *alpha, double *out);
-
-
 static const R_FortranMethodDef FortEntries[] = {
   {"KSPvalue", (DL_FUNC) & KSPvalue, 1},
+  {"KSP2x", (DL_FUNC) & KSP2x, 2},
+  {"pks2", (DL_FUNC) & pks2, 3},
+
   {"emmix", (DL_FUNC) &F77_SUB(emmix), 13},
   {"smoothkde", (DL_FUNC) &F77_SUB(smoothkde),  9},
-  {"nrlogit", (DL_FUNC) &F77_SUB(nrlogit),  4},
-  {"ppower", (DL_FUNC) & ppower, 6},
-  {"orexactl", (DL_FUNC) & orexactl, 3},
-  {"orexactu", (DL_FUNC) & orexactu, 3},
 
   {"hbmise", (DL_FUNC) & hbmise, 5},
   {"ofcpdf", (DL_FUNC) &F77_SUB(ofcpdf), 8},
@@ -97,6 +134,26 @@ static const R_FortranMethodDef FortEntries[] = {
   {"linbin", (DL_FUNC) &F77_SUB(linbin),  7},
   {"lbtwod", (DL_FUNC) &F77_SUB(lbtwod),  9},
   {"bintwod", (DL_FUNC) &F77_SUB(bintwod),  7},
+
+  {"em3", (DL_FUNC) & em3, 4},
+  {"permtest", (DL_FUNC) & permtest, 9},
+  {"permtest2", (DL_FUNC) & permtest2, 6},
+  {"permtest3", (DL_FUNC) & permtest3, 5},
+
+  {"lnormBinChisq", (DL_FUNC) & lnormBinChisq, 5},
+  {"lnormBinMLE", (DL_FUNC) & lnormBinMLE, 5},
+  {"mclnorm", (DL_FUNC) & mclnorm, 5},
+  {"mclnorm2", (DL_FUNC) & mclnorm2, 6},
+  {"mleTN", (DL_FUNC) & mleTN, 7},
+  {"mlemixTN", (DL_FUNC) & mlemixTN, 9},
+  {"qtlmlnorm", (DL_FUNC) & qtlmlnorm, 5},
+
+  {"qmPareto", (DL_FUNC) & qmPareto, 5},
+  {"mle1Pareto", (DL_FUNC) & mle1Pareto, 5},
+  {"mle2Pareto", (DL_FUNC) & mle2Pareto, 5},
+
+  {"orexactl", (DL_FUNC) & orexactl, 3},
+  {"orexactu", (DL_FUNC) & orexactu, 3},
 
   {NULL, NULL, 0}
 };

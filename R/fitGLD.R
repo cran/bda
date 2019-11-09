@@ -15,14 +15,14 @@ fit.GLD <- function(x, lbound, ubound, method='chisquare')
         warning("MOP (approximate) failed")
     }else{
         res <- out
-        pv0 <- gof(out, method=method)$p.value
+        pv0 <- gof.test(out, method=method)$p.value
     }
     out <- fit.GLD.FMKL(x=x,lbound=lbound,ubound=ubound,
                         percentile='appro',mle=TRUE)
     if(any(!is.finite(out$pars)) || out$pars[2] <= 0){
         warning("MLE (approximate) failed")
     }else{
-        pv <- gof(out, method=method)$p.value
+        pv <- gof.test(out, method=method)$p.value
         if(pv > pv0){
             res <- out
             pv0 <- pv
@@ -33,7 +33,7 @@ fit.GLD <- function(x, lbound, ubound, method='chisquare')
     if(any(!is.finite(out$pars)) || out$pars[2] <= 0){
         warning("MOP (exact) failed")
     }else{
-        pv <- gof(out, method=method)$p.value
+        pv <- gof.test(out, method=method)$p.value
         if(pv > pv0){
             res <- out
             pv0 <- pv
@@ -44,7 +44,7 @@ fit.GLD <- function(x, lbound, ubound, method='chisquare')
     if(any(!is.finite(out$pars)) || out$pars[2] <= 0){
         warning("MLE (exact) failed")
     }else{
-        pv <- gof(out, method=method)$p.value
+        pv <- gof.test(out, method=method)$p.value
         if(pv > pv0){
             res <- out
             pv0 <- pv
@@ -52,7 +52,7 @@ fit.GLD <- function(x, lbound, ubound, method='chisquare')
     }
     if(!missing(lbound) && !missing(ubound)){
         out <- fit.GB(x=x,lbound=lbound,ubound=ubound)
-        pv <- gof(out, method=method)$p.value
+        pv <- gof.test(out, method=method)$p.value
         if(pv > pv0){
             res <- out
             pv0 <- pv
@@ -62,7 +62,8 @@ fit.GLD <- function(x, lbound, ubound, method='chisquare')
     res
 }
 
-fit.GLD.FMKL <- function(x, lbound, ubound, percentile='exact', mle=FALSE)
+fit.GLD.FMKL <- function(x, qtl, qtl.levels, lbound, ubound,
+                         percentile='exact', mle=FALSE)
 {
     x.raw <- FALSE
     if(class(x) == 'numeric'){
@@ -77,7 +78,8 @@ fit.GLD.FMKL <- function(x, lbound, ubound, percentile='exact', mle=FALSE)
 
     percentile <- match.arg(tolower(percentile),
                         c("exact","approximate"))
-    if(x.raw) percentile <- "raw"
+    if(x.raw) percentile <- "approximate"
+    if(length(x$breaks) <= 7) percentile <- "approximate"
 
     if(missing(lbound)){
         lbound <- NULL
@@ -119,8 +121,22 @@ fit.GLD.FMKL <- function(x, lbound, ubound, percentile='exact', mle=FALSE)
             qtls <- as.numeric(quantile(y, qlevels))
             res <- .gld.mop(qlevels,qtls,a,b,lbound,ubound)
         }else{
-            x.exact <- switch(percentile, 'exact'=TRUE,'approximate'=FALSE)
-            res <- .gld.qtlmatching(x, x.exact,a,b,lbound,ubound)
+            if(missing(qtl) || missing(qtl.levels)){
+                x.exact <- switch(percentile, 'exact'=TRUE,'approximate'=FALSE)
+                res <- .gld.qtlmatching(x, x.exact,a,b,lbound,ubound)
+            }else{
+                stopifnot(length(qtl) == 5)
+                stopifnot(length(qtl.levels) == 5)
+                if(any(is.na(qtl))) stop("missing value(s) in 'qtl'")
+                if(any(is.na(qtl.levels))) stop("missing value(s) in 'qtl.levels'")
+                qtl <- sort(qtl)
+                qtl.levels <- sort(qtl.levels)
+                stopifnot(all(qtl[1] > a))
+                stopifnot(all(qtl[5] < b))
+                stopifnot(qtl.levels[1] > 0)
+                stopifnot(qtl.levels[5] < 1)
+                res <- .gld.mop(qtl.levels,qtl,a,b,lbound,ubound)
+            }
         }
     }
     
@@ -130,9 +146,12 @@ fit.GLD.FMKL <- function(x, lbound, ubound, percentile='exact', mle=FALSE)
         method <- "Percentile.Matching(exact)"
     else
         method <- "Percentile.Matching(approx)"
-    
+    llk <- .llk(x, 'gld', res)
+    ModSel <- .aic(llk,4,sum(x$counts))
+
     structure(
         list(xhist=x, pars=res,method=method,
+             ModSel = ModSel,
              call = match.call()),
         class="FMKL")
 }
@@ -150,24 +169,28 @@ print.FMKL <- function(x,...){
         cat("  Range: =[",x.range[1],", ", x.range[5],"]\tMedian: =",
             x.range[3], "\tIQR: =", x.range[4]-x.range[2],
             "\n",sep='')
+        print(x$ModSel)
     }
 }
 
-plot.FMKL <- function(x,hist=TRUE,...){
+plot.FMKL <- function(x,hist=TRUE,xlim=NULL,...){
     if(is.null(x$pars))
         warning("GLD fitting failed!")
     else{
         res <- .bdataTohist(x$xhist)
         k <- length(res$mids)
-        a <- res$breaks[1]
-        b <- res$breaks[k+1]
-        x0 <- seq(a, b, length=100)
+        if(!is.null(xlim)){
+            a <- xlim[1]
+            b <- xlim[2]
+        }else{
+            a <- res$breaks[1]
+            b <- res$breaks[k+1]
+            xlim <- c(a,b)
+        }
+        x0 <- seq(a, b, length=401)
         f0 <- dgld(x0, x$pars)
-#        x.sele <- f0 > 0
-#        x0 <- x0[x.sele]
-#        f0 <- f0[x.sele]
         if(hist){
-            plot(res,...)
+            plot(res,xlim=xlim,...)
             lines(f0~x0,...)
         }else{
             plot(f0~x0, ...)
@@ -175,19 +198,21 @@ plot.FMKL <- function(x,hist=TRUE,...){
     }
 }
 
-lines.FMKL <- function(x,...){
+lines.FMKL <- function(x,xlim=NULL,...){
     if(is.null(x$pars))
         warning("GLD fitting failed!")
     else{
         res <- .bdataTohist(x$xhist)
         k <- length(res$mids)
-        a <- res$breaks[1]
-        b <- res$breaks[k+1]
-        x0 <- seq(a, b, length=100)
+        if(!is.null(xlim)){
+            a <- xlim[1]
+            b <- xlim[2]
+        }else{
+            a <- res$breaks[1]
+            b <- res$breaks[k+1]
+        }
+        x0 <- seq(a, b, length=401)
         f0 <- dgld(x0, x$pars)
-#        x.sele <- f0 > 0
-#        x0 <- x0[x.sele]
-#        f0 <- f0[x.sele]
         lines(f0~x0,...)
     }
 }
@@ -372,17 +397,10 @@ lines.FMKL <- function(x,...){
     }
 }
 
-#        if(!is.finite(out)){
-#            cat("\nlmd:", lmd,
-#                "\n a=:",a, "\tb=:",b,
-#                "\n p=",p,
-#                "\n q=",q,
-#                "\nRhos", c(rho3hat, rho4hat, rho3, rho4), "\n")
-#            out <- 1e10
-#        }
-
 .gld.mop <- function(p,q,a,b,lbound,ubound){
-    .g.mop <- function(lmd){
+    out <- data.frame(Levels=p, Percentiles=q)
+    ##print(out)
+    .g.mop <- function(lmd,q){
         rho3hat <- (q[3] - q[1])/(q[5] - q[3])
         rho4hat <- (q[4]-q[2])/(q[5]-q[1])
         Q1 <- .fexp(p[1],lmd[1]) - .fexp(1-p[1],lmd[2])
@@ -394,6 +412,10 @@ lines.FMKL <- function(x,...){
         rho3 <- ifelse(Q5-Q3==0, 1e10, (Q3-Q1)/(Q5-Q3))
         rho4 <- ifelse(Q5-Q1==0, 1e10, (Q4-Q2)/(Q5-Q1))
         out <- (rho3-rho3hat)^2+(rho4-rho4hat)^2
+        if(!is.finite(out)) out <- 999
+        if(is.na(out)) out <- 999
+        if(is.nan(out)) out <- 999
+        out
     }
     lambdas <- c(1,1)
 
@@ -415,58 +437,35 @@ lines.FMKL <- function(x,...){
         l4l <- -Inf; l4u <- -1e-8
     }
 
-    pars <- optim(lambdas, .g.mop,method="L-BFGS-B",
+    pars <- optim(lambdas, .g.mop, q=q,
+                  method="L-BFGS-B",
                   lower=c(l3l,l4l),upper=c(l3u,l4u),
                   control = list(maxit=10000))$par
-    
-    l3 <- pars[1]; l4 <- pars[2]
-    Q5 <- (p[5]^l3-1)/l3 - ((1-p[5])^l4-1)/l4
-    Q3 <- (p[3]^l3-1)/l3 - ((1-p[3])^l4-1)/l4
-    Q1 <- (p[1]^l3-1)/l3 - ((1-p[1])^l4-1)/l4
-    l2 <- (Q5-Q1)/(q[5]-q[1])
-    l1 <- q[3] - Q3/l2
 
-    if(lb){
-        if(ub){
-            l2 <- (1/l3+1/l4)/(ubound-lbound)
-            l1 <- ubound - 1/(l2*l4)
+    if(all(is.finite(pars))){
+        l3 <- pars[1]; l4 <- pars[2]
+        Q5 <- (p[5]^l3-1)/l3 - ((1-p[5])^l4-1)/l4
+        Q3 <- (p[3]^l3-1)/l3 - ((1-p[3])^l4-1)/l4
+        Q1 <- (p[1]^l3-1)/l3 - ((1-p[1])^l4-1)/l4
+        l2 <- (Q5-Q1)/(q[5]-q[1])
+        l1 <- q[3] - Q3/l2
+        
+        if(lb){
+            if(ub){
+                l2 <- (1/l3+1/l4)/(ubound-lbound)
+                l1 <- ubound - 1/(l2*l4)
+            }else{
+                l1 <- lbound + 1/(l2*l3)
+            }
         }else{
-            l1 <- lbound + 1/(l2*l3)
+            if(ub)
+                l1 <- ubound - 1/(l2*l4)
         }
+        res <- c(l1,l2,l3,l4)    
     }else{
-        if(ub)
-            l1 <- ubound - 1/(l2*l4)
+        res <- c(1,2,3,4)
     }
-    res <- c(l1,l2,l3,l4)
-#    l20 <- l2
-#    ## check whether adjustment is needed
-#    xmax <- qgld(1,res)
-#    xmin <- qgld(0,res)
-
-#    if(a < xmin){
-#        l2a <- 1/((l1-a)*l3)
-#        if(l2a > 0) l2 <- l2a
-#    }
-    
-#    if(b > xmax){
-#        l2b <- 1/((b-l1)*l4)
-#        if(l2b > 0) l2 <- min(l2, l2b)
-#    }
-
-#    res <- c(l1,l2,l3,l4)
-#    xmax <- qgld(1,res)
-#    xmin <- qgld(0,res)
-#    if(a < xmin|| b > xmax){
-#        l2c <- (1/l4+1/l3)/(b-a)
-#        if(l2c > 0) l2 <- min(l2, l2c)
-#    }
-#    if(l20 != l2)
-#        warning("Ranges not match. Estimates adjusted.")
-
-#    res <- c(l1,l2,l3,l4)
-#    res
-#    res <- c(l1,l20,l3,l4)
-    
+    res
 }
 
 .gld.nls <- function(x){
@@ -506,16 +505,25 @@ rgld <- function(n, lambdas){
 }
 
 qgld <- function(p, lambdas){
-    if(p < 0 || p > 1)
-        stop("Invalid 'p' value")
+    sele <- p < 0 | p > 1
+    out <- rep(NA, length(p))
     if(any(!is.finite(lambdas)) || lambdas[2]<=0)
         stop("Invalid FMKL-GLD parameters")
     l1 <- lambdas[1]
     l2 <- lambdas[2]
     l3 <- lambdas[3]
     l4 <- lambdas[4]
-    u <- p
-    l1+((u^l3-1)/l3-((1-u)^l4-1)/l4)/l2
+    if(any(sele)){
+        if(!all(sele)){
+            u <- p[!sele]
+            tmp <- l1+((u^l3-1)/l3-((1-u)^l4-1)/l4)/l2
+            out[!sele] <- tmp
+        }
+    }else{
+        u <- p
+        out <- l1+((u^l3-1)/l3-((1-u)^l4-1)/l4)/l2
+    }
+    out
 }
 
 .fungld <- function(u,q,lambdas){
@@ -586,5 +594,3 @@ dgld <- function(x, lambdas){
     .Fortran(.F_rootGldFmklBisection,
              u=as.double(q), as.double(lambdas))$u
 }
-
-

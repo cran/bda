@@ -1180,47 +1180,6 @@ void orexactu(int *counts, double *alpha, double *out)
   out[0] = p0;
 }
 
-// to compute the power for an ANOVA-type test for proportions.
-
-double CalPower(int n0, double p0, int n1, double p1, double alpha)
-{
-  int i,j;
-  double phat, px, pv, res;
-  res = 0.0;
-  for(i=0;i <= n0;i++){
-    for(j=0;j <= n1;j++){
-      px = dbinom(i, n0, p0, 0) * 
-	dbinom(j, n1, p1, 0);
-      phat = 1.0*(i+j)/(n0+n1);
-      pv = dbinom(i, n0, phat, 0) * 
-	dbinom(j, n1, phat, 0);
-      if(pv < alpha){
-	res += px;
-      }
-    }
-  }
-  return(res);
-}
-
-
-void ppower(double *p0, int *gsize, double *esize, double *alpha,
-	    int *ssize, double *pwr)
-{
-  int ngrid = gsize[0], n0 = ssize[0], n1 = ssize[1];
-  double delta = esize[0], out=0.0, p1;
-  int i,l;
-  
-  l = 0;
-  for(i=0;i<ngrid;i++){
-    p1 = p0[i] + delta;
-    if(p1 >=0.0 && p1 <= 1.0){
-      l++;
-      out += CalPower(n0,p0[i],n1,p1,alpha[0]);
-    }
-  }
-  if(l > 0)
-    pwr[0] = out/l;
-}
 
 void DesignMatrix(double *xv, int *size, double *bw, double *dm){
   int i,j, n =size[0];
@@ -1259,3 +1218,57 @@ void DesignMatrix(double *xv, int *size, double *bw, double *dm){
   }
 }
 
+void pks2(double *x, int *size1, int *size2){
+  double md, nd, q, *u, w;
+  int i, j, m=size1[0], n=size2[0];
+  if(m > n) {
+    i = n; n = m; m = i;
+  }
+  md = (double) m;
+  nd = (double) n;
+  q = (0.5 + floor(*x * md * nd - 1e-7)) / (md * nd);
+  u = (double *) R_alloc(n + 1, sizeof(double));
+  for(j = 0; j <= n; j++) {
+    u[j] = ((j / nd) > q) ? 0 : 1;
+  }
+  for(i = 1; i <= m; i++) {
+      w = (double)(i) / ((double)(i + n));
+      if((i / md) > q)
+	u[0] = 0;
+      else
+	u[0] = w * u[0];
+      for(j = 1; j <= n; j++) {
+	if(fabs(i / md - j / nd) > q) 
+	  u[j] = 0;
+	else
+	  u[j] = w * u[j] + u[j - 1];
+      }
+  }
+  x[0] = fabs(1.0 - u[n]);
+}
+
+void KSP2x(double *D, int *size){
+  /* copied from R ks.c file */
+  
+  /* Compute Kolmogorov's distribution.
+     Code published in
+     George Marsaglia and Wai Wan Tsang and Jingbo Wang (2003),
+     "Evaluating Kolmogorov's distribution".
+     Journal of Statistical Software, Volume 8, 2003, Issue 18.
+     URL: http://www.jstatsoft.org/v08/i18/.
+  */
+
+  int n=size[0];
+  double d=D[0];
+  
+  double p=0.0, s;
+   
+  /* 
+     The faster right-tail approximation.
+  */
+  s = d*d*n; 
+  if(s > 7.24 || (s > 3.76 && n > 99)){ 
+    p = 1-2*exp(-(2.000071+.331/sqrt(n)+1.409/n)*s);
+  }
+  D[0] = p;
+}

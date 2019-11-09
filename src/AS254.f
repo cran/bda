@@ -34,7 +34,8 @@ C
      *        IT, IU, J1, J2, J3, JG, JG1, K1, K2, KG, KG1, LOC1, LOC2,
      *        LOC3, LOC4, LOC5, LOC6, MAXITR, NG1, NG3, NN, NPAR, NR1,
      *        NR2, NROW, NTOT, NULL
-      DOUBLE PRECISION FNT(2), AA, AB, ARG, BA, BB, CA, CB, CONST, FN, ONE, R1, R2,
+      DOUBLE PRECISION FNT(2), AA, AB, ARG, BA, BB, CA, CB, CONST, FN, 
+     *     ONE, R1, R2,
      *     RATIO, SMALL, SMALLM, SUMPI, T, TOT, TOTN, TRUNC, TWO, TXBAR,
      *     TXLOGL, UFLO, WW,XS,ZERO
       EXTERNAL ALNORM
@@ -52,11 +53,11 @@ C
       IF(IFAULT.NE.0)RETURN
       SUMPI = ZERO
       DO 1 IG = 1,NG
-	IF(PI(IG).LT.ZERO.OR.PI(IG).GT.ONE)IFAULT = 2
+      IF(PI(IG).LT.ZERO.OR.PI(IG).GT.ONE)IFAULT = 2
         IF(IFAULT.NE.0)RETURN
-	IF(VAR(IG).LE.ZERO)IFAULT = 4
+      IF(VAR(IG).LE.ZERO)IFAULT = 4
         IF(IFAULT.NE.0)RETURN
-	SUMPI = SUMPI+PI(IG)
+      SUMPI = SUMPI+PI(IG)
     1 CONTINUE
       IF(SUMPI.NE.ONE)IFAULT = 3
       IF(IFAULT.NE.0)RETURN
@@ -81,7 +82,8 @@ C
    20 CONTINUE
       NTOT = 0
       DO 30 IR = 1,NR
-   30 NTOT = NTOT+N(IR)
+      NTOT = NTOT+N(IR)
+   30 CONTINUE
       FN = NTOT
 C
 C        Begin iteration loop
@@ -93,68 +95,68 @@ C
 C        Calculate the A, B and C's
 C
    40 DO 60 IG = 1,NG
-	I1 = LOC3+IG
-	I2 = I1+NG
-	I3 = I2+NG
-	WK(I1) = ZERO
-	WK(I2) = ZERO
-	WK(I3) = ZERO
-	AA = ZERO
-	BA = ZERO
-	CA = ZERO
-	DO 50 IR = 1,NR1
+      I1 = LOC3+IG
+      I2 = I1+NG
+      I3 = I2+NG
+      WK(I1) = ZERO
+      WK(I2) = ZERO
+      WK(I3) = ZERO
+      AA = ZERO
+      BA = ZERO
+      CA = ZERO
+      DO 50 IR = 1,NR1
           IF(IR.EQ.1)THEN
-	    XS = X0
+          XS = X0
           ELSE
-	    IR1 = IR-1
-	    XS = X(IR1)
+          IR1 = IR-1
+          XS = X(IR1)
           ENDIF
-	  WW = SQRT(VAR(IG))
-	  ARG = (XS-XBAR(IG))/WW
+        WW = SQRT(VAR(IG))
+        ARG = (XS-XBAR(IG))/WW
           IF(ARG.LE.ZERO)THEN
-	    AB = ALNORM(ARG,.FALSE.)
+          AB = ALNORM(ARG,.FALSE.)
           ELSE
-	    AB = ONE-ALNORM(ARG,.TRUE.)
+          AB = ONE-ALNORM(ARG,.TRUE.)
           ENDIF
-	  ARG = -ARG*ARG/TWO
+        ARG = -ARG*ARG/TWO
           IF(ARG.GT.UFLO)THEN
-	    ARG = EXP(ARG)
+          ARG = EXP(ARG)
           ELSE
-	    ARG = ZERO
+          ARG = ZERO
           ENDIF
-	  BB = ARG*CONST/WW
-	  CB = XS*BB
-	  J1 = (IG-1)*NR2+IR
-	  J2 = LOC1+J1
-	  J3 = LOC2+J1
-	  WK(J1) = AB-AA
-	  WK(J2) = BB-BA
-	  WK(J3) = CB-CA
-	  AA = AB
-	  BA = BB
-	  CA = CB
+        BB = ARG*CONST/WW
+        CB = XS*BB
+        J1 = (IG-1)*NR2+IR
+        J2 = LOC1+J1
+        J3 = LOC2+J1
+        WK(J1) = AB-AA
+        WK(J2) = BB-BA
+        WK(J3) = CB-CA
+        AA = AB
+        BA = BB
+        CA = CB
    50   CONTINUE
-	J1 = (IG-1)*NR2+NR2
-	J2 = LOC1+J1
-	J3 = LOC2+J1
-	WK(J1) = ONE-AA
-	WK(J2) = -BA
-	WK(J3) = -CA
+      J1 = (IG-1)*NR2+NR2
+      J2 = LOC1+J1
+      J3 = LOC2+J1
+      WK(J1) = ONE-AA
+      WK(J2) = -BA
+      WK(J3) = -CA
    60 CONTINUE
 C
 C         Calculate the P's
 C
       TRUNC = ZERO
       DO 80 IR = 1,NR2
-	K1 = LOC4+IR
-	WK(K1) = ZERO
-	DO 70 IG = 1,NG
-	  J1 = (IG-1)*NR2+IR
-	  WK(K1) = WK(K1)+PI(IG)*WK(J1)
+      K1 = LOC4+IR
+      WK(K1) = ZERO
+      DO 70 IG = 1,NG
+        J1 = (IG-1)*NR2+IR
+        WK(K1) = WK(K1)+PI(IG)*WK(J1)
    70   CONTINUE
-	IF(WK(K1).LE.ZERO)IFAULT = 6
+      IF(WK(K1).LE.ZERO)IFAULT = 6
         IF(IFAULT.NE.0)RETURN
-	TRUNC = TRUNC+WK(K1)
+      TRUNC = TRUNC+WK(K1)
    80 CONTINUE
 C
 C        Calculate the sums of the A, B and C's
@@ -165,34 +167,34 @@ C
       TOT = ZERO
       TXLOGL = ZERO
       DO 110 IR = 1,NR2
-	K1 = LOC4+IR
+      K1 = LOC4+IR
         IF(IR.EQ.1.OR.IR.EQ.NR2)THEN
-	  K2 = IR/NR2+1
+        K2 = IR/NR2+1
           IF(ITRUNC.EQ.0)THEN
-	      T = FNT(K2)
+            T = FNT(K2)
           ELSE
-	    T = FN*WK(K1)/TRUNC
-	    FNT(K2) = T
+          T = FN*WK(K1)/TRUNC
+          FNT(K2) = T
           ENDIF
         ELSE
-	  IR1 = IR-1
-	  T = FLOAT(N(IR1))
+        IR1 = IR-1
+        T = FLOAT(N(IR1))
         ENDIF
         IF(ITRUNC.EQ.1.AND.(IR.EQ.1.OR.IR.EQ.NR2))GOTO 90
-	TXLOGL = TXLOGL+T*LOG(WK(K1))
+      TXLOGL = TXLOGL+T*LOG(WK(K1))
    90   CONTINUE
-	TOT = TOT+T
-	T = T/WK(K1)
-	DO 100 IG = 1,NG
-	  I1 = LOC3+IG
-	  I2 = I1+NG
-	  I3 = I2+NG
-	  J1 = (IG-1)*NR2+IR
-	  J2 = LOC1+J1
-	  J3 = LOC2+J1
-	  WK(I1) = WK(I1)+T*WK(J1)
-	  WK(I2) = WK(I2)+T*WK(J2)
-	  WK(I3) = WK(I3)+T*WK(J3)
+      TOT = TOT+T
+      T = T/WK(K1)
+      DO 100 IG = 1,NG
+        I1 = LOC3+IG
+        I2 = I1+NG
+        I3 = I2+NG
+        J1 = (IG-1)*NR2+IR
+        J2 = LOC1+J1
+        J3 = LOC2+J1
+        WK(I1) = WK(I1)+T*WK(J1)
+        WK(I2) = WK(I2)+T*WK(J2)
+        WK(I3) = WK(I3)+T*WK(J3)
  100   CONTINUE
  110  CONTINUE
       IF(ITRUNC.NE.0) TXLOGL = TXLOGL-FN*LOG(TRUNC)
@@ -200,19 +202,19 @@ C
 C     Calculate the new estimates
 C     
       DO 120 IG = 1,NG
-	I1 = LOC3+IG
-	I2 = I1+NG
-	I3 = I2+NG
-	WW = WK(I1)
-	R1 = WK(I2)/WW
-	R2 = WK(I3)/WW
-	ARG = VAR(IG)
-	TXBAR = XBAR(IG)-R1*ARG
-	VAR(IG) = ARG*(ONE-R2+
+      I1 = LOC3+IG
+      I2 = I1+NG
+      I3 = I2+NG
+      WW = WK(I1)
+      R1 = WK(I2)/WW
+      R2 = WK(I3)/WW
+      ARG = VAR(IG)
+      TXBAR = XBAR(IG)-R1*ARG
+      VAR(IG) = ARG*(ONE-R2+
      *          (TWO*TXBAR-XBAR(IG))*R1)+
      *          (TXBAR-XBAR(IG))**2
-	XBAR(IG) = TXBAR
-	PI(IG) = PI(IG)*WW/TOT
+      XBAR(IG) = TXBAR
+      PI(IG) = PI(IG)*WW/TOT
   120 CONTINUE
 C
 C        If convergence criterion is not satisfied,
@@ -230,85 +232,85 @@ C        Calculate the standard errors of the estimates
 C
   130 IT = 0
       DO 150 IP = 1,NG3
-	I1 = LOC5+IP
-	WK(I1) = ZERO
-	DO 140 IQ = 1,IP
-	  IT = IT+1
-	  I2 = LOC6+IT
-	  WK(I2) = ZERO
+      I1 = LOC5+IP
+      WK(I1) = ZERO
+      DO 140 IQ = 1,IP
+        IT = IT+1
+        I2 = LOC6+IT
+        WK(I2) = ZERO
   140   CONTINUE
   150 CONTINUE
       IF(ITRUNC.EQ.0)THEN
-	IL = 1
-	IU = NR2
-	TOTN = FN+FNT(1)+FNT(2)
+      IL = 1
+      IU = NR2
+      TOTN = FN+FNT(1)+FNT(2)
       ELSE
-	IL = 2
-	IU = NR1
-	TOTN = FN
+      IL = 2
+      IU = NR1
+      TOTN = FN
       ENDIF
 C
       DO 190 IR = IL,IU
-	IR1 = IR-1
-	IF(IR.EQ.1)NN = NL
-	IF(IR.EQ.NR2)NN = NU
-	IF(IR.NE.1.AND.IR.NE.NR2)NN = N(IR1)
-	K1 = LOC4+IR
-	K2 = NG1*NR2+IR
-	WW = WK(K2)
+      IR1 = IR-1
+      IF(IR.EQ.1)NN = NL
+      IF(IR.EQ.NR2)NN = NU
+      IF(IR.NE.1.AND.IR.NE.NR2)NN = N(IR1)
+      K1 = LOC4+IR
+      K2 = NG1*NR2+IR
+      WW = WK(K2)
 C
-	DO 160 IG = 1,NG
-	  J1 = (IG-1)*NR2+IR
-	  J2 = LOC1+J1
-	  J3 = LOC2+J1
-	  RATIO = PI(IG)/WK(K1)
-	  WK(J1) = (WK(J1)-WW)/WK(K1)
-	  WK(J2) = -RATIO*WK(J2)
-	  WK(J3) = -(WK(J2)*XBAR(IG)+RATIO*WK(J3))/(TWO*VAR(IG))
+      DO 160 IG = 1,NG
+        J1 = (IG-1)*NR2+IR
+        J2 = LOC1+J1
+        J3 = LOC2+J1
+        RATIO = PI(IG)/WK(K1)
+        WK(J1) = (WK(J1)-WW)/WK(K1)
+        WK(J2) = -RATIO*WK(J2)
+        WK(J3) = -(WK(J2)*XBAR(IG)+RATIO*WK(J3))/(TWO*VAR(IG))
   160   CONTINUE
 C
-	IT = 0
-	DO 180 IG = 1,NG3
-	  IG1 = IG-1
-	  I1 = IG1*NR2+IR
-	  II1 = LOC5+IG
-	  WK(II1) = WK(II1)+NN*WK(I1)
-	  DO 170 JG = 1,IG
-	    IT = IT+1
-	    I2 = (JG-1)*NR2+IR
-	    I3 = LOC6+IT
+      IT = 0
+      DO 180 IG = 1,NG3
+        IG1 = IG-1
+        I1 = IG1*NR2+IR
+        II1 = LOC5+IG
+        WK(II1) = WK(II1)+NN*WK(I1)
+        DO 170 JG = 1,IG
+          IT = IT+1
+          I2 = (JG-1)*NR2+IR
+          I3 = LOC6+IT
             IF(LOG(ABS(WK(I1))+SMALLM)+
      *         LOG(ABS(WK(I2))+SMALLM).LT.
      *         LOG(SMALLM))GOTO 170
-	    WK(I3) = WK(I3)+NN*WK(I1)*WK(I2)
+          WK(I3) = WK(I3)+NN*WK(I1)*WK(I2)
   170     CONTINUE
   180   CONTINUE
   190 CONTINUE
 C
       IF(ITRUNC.EQ.0)GOTO 220
 C
-      NL = FNT(1)
-      NU = FNT(2)
+      NL = INT(FNT(1))
+      NU = INT(FNT(2))
       IT = 0
       DO 210 IG = 1,NG3
-	I1 = LOC5+IG
-	DO 200 JG = 1,IG
-	  IT = IT+1
-	  I2 = LOC5+JG
-	  I3 = LOC6+IT
-	  WK(I3) = WK(I3)-WK(I1)*WK(I2)/TOTN
+      I1 = LOC5+IG
+      DO 200 JG = 1,IG
+        IT = IT+1
+        I2 = LOC5+JG
+        I3 = LOC6+IT
+        WK(I3) = WK(I3)-WK(I1)*WK(I2)/TOTN
   200   CONTINUE
   210 CONTINUE
 C
   220 IT = 0
       IP = 0
       DO 240 IG = 1,NG3
-	DO 230 JG = 1,IG
-	  IT = IT+1
+      DO 230 JG = 1,IG
+        IT = IT+1
           IF(IG.EQ.NG.OR.JG.EQ.NG)GO TO 230
-	  IP = IP+1
-	  I1 = LOC6+IT
-	  WK(IP) = WK(I1)
+        IP = IP+1
+        I1 = LOC6+IT
+        WK(IP) = WK(I1)
   230   CONTINUE
   240 CONTINUE
 C
@@ -316,30 +318,30 @@ C
       NN = NPAR*(NPAR+1)/2
       CALL SYMINV(WK,NROW,NN,WK,WK(LOC3),NULL,IFA)
       IF(NG.EQ.1)THEN
-	PSE(1) = ZERO
+      PSE(1) = ZERO
       ELSE
-	IT = 0
-	PSE(NG) = ZERO
-	DO 260 IG = 1,NG1
-	  KG = IG*(IG+1)/2
-	  PSE(IG) = WK(KG)
-	  PSE(NG) = PSE(NG)-PSE(IG)
-	  PSE(IG) = SQRT(PSE(IG))
-	  DO 250 JG = 1,IG
-	    IT = IT+1
-	    PSE(NG) = PSE(NG)+TWO*WK(IT)
+      IT = 0
+      PSE(NG) = ZERO
+      DO 260 IG = 1,NG1
+        KG = IG*(IG+1)/2
+        PSE(IG) = WK(KG)
+        PSE(NG) = PSE(NG)-PSE(IG)
+        PSE(IG) = SQRT(PSE(IG))
+        DO 250 JG = 1,IG
+          IT = IT+1
+          PSE(NG) = PSE(NG)+TWO*WK(IT)
   250     CONTINUE
   260   CONTINUE
-	PSE(NG) = SQRT(PSE(NG))
+      PSE(NG) = SQRT(PSE(NG))
       ENDIF
 C
       DO 270 IG = 1,NG
-	JG = IG+NG-1
-	JG1 = (JG+1)*JG/2
-	KG = JG+NG
-	KG1 = (KG+1)*KG/2
-	XSE(IG) = SQRT(WK(JG1))
-	VSE(IG) = SQRT(WK(KG1))
+      JG = IG+NG-1
+      JG1 = (JG+1)*JG/2
+      KG = JG+NG
+      KG1 = (KG+1)*KG/2
+      XSE(IG) = SQRT(WK(JG1))
+      VSE(IG) = SQRT(WK(KG1))
   270 CONTINUE
       RETURN
       END
@@ -465,7 +467,8 @@ C       CALCULATES AN UPPER TRIANGLE, U( ), SUCH THAT UPRIME * U = A.
 C       A MUST BE POSITIVE SEMI-DEFINITE.  ETA IS SET TO MULTIPLYING
 C       FACTOR DETERMINING EFFECTIVE ZERO FOR PIVOT.
 C
-        DOUBLE PRECISION A(NN), U(NN), ETA, ETA2, X, W, ZERO, ZABS, ZSQRT
+        DOUBLE PRECISION A(NN), U(NN), ETA, ETA2, X, W, ZERO, 
+     *                   ZABS, ZSQT
 C
 C       THE VALUE OF ETA WILL DEPEND ON THE WORD-LENGTH OF THE 
 C       COMPUTER BEING USED.  SEE INTRODUCTORY TEXT.
@@ -473,7 +476,7 @@ C
         DATA ETA, ZERO /1.E-5, 0.0/
 C
         ZABS(X) = ABS(X)
-        ZSQRT(X) = SQRT(X)
+        ZSQT(X) = SQRT(X)
 C
         IFAULT=1
         IF(N.LE.0) GO TO 100
@@ -516,7 +519,7 @@ C
    40   CONTINUE
    50   IF (ZABS(W) .LE. ZABS(ETA*A(K))) GOTO 60
         IF(W.LT.ZERO) RETURN
-        U(K)=ZSQRT(W)
+        U(K) = ZSQT(W)
         GO TO 70
    60   U(K)=ZERO
         NULLTY=NULLTY+1
@@ -525,3 +528,4 @@ C
         IFAULT=0
   100   RETURN
         END
+

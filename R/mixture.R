@@ -49,7 +49,7 @@ fit.mixnorm.bdata <-
                        x.range=x.range, lognormal=lognormal)
         res$xhist <- x
         res$call <- f.call
-
+        
         xpts <- c(res$x.range[1],x$breaks[1],
                   x$breaks[x$nclass+1],res$x.range[2])
         Fx <- cdf.nmix(res, x0=xpts)
@@ -175,9 +175,14 @@ fit.mixnorm.bdata <-
     AICc = AIC + 2.0 * K * (K+1.) / (N - K - 1.0);
     BIC = -2.0 * llk0 + log(N*2.0*pi) * K;
 
+    ## sort the fitted components
+    mm.mu <- out$mu-c.glog
+    x.ord <- order(mm.mu)
     
     structure(list(xhist=NULL, 
-                   ng=ng,p=out$p, mu=out$mu-c.glog, s=sqrt(out$v),
+                   ng=ng,p=out$p[x.ord],
+                   mu=mm.mu[x.ord],
+                   s=sqrt(out$v)[x.ord],
                    llk = out$xlogl, nl = nl, nu = nu,
                    iter = out$iter, ifault = out$ifault,
                    "AIC"=AIC, "BIC"=BIC,"AICc"=AICc,

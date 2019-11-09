@@ -11,41 +11,27 @@
 ## examined, within fixed levels of the response variable. See Stokes,
 ## Davis, and Koch (2000) and Agresti (2007).
 
-oddsratio <- function(x,alpha=0.05,n, ...)
-UseMethod("oddsratio")
-
-oddsratio.default <- function(x, alpha=0.05,n,...)
+oddsratio <- function(x,alpha=0.05,...)
 {
-  if(length(x) != 2 || length(n) != 2)
-    stop("Lengths of 'x' and/or 'n' not equal to two.")
-  if(any(x > n) || any(x<0) || any(n<0))
-    stop("Invalid data")
-  n = as.integer(n); x = as.integer(x)
-  y = data.frame(Event = x, Size = n)
-  row.names(y) <- c("Sample 1","Sample 2")
-  oddsratio(as.data.frame(y),alpha=alpha,...)
-}
 
+    x <- as.matrix(x)
+    if(any(dim(x) != 2))
+        stop("'x' must be a 2x2 table")
 
-oddsratio.matrix <- function(x,alpha=0.05,...)
-{
-  oddsratio(as.data.frame(x),alpha=alpha,...)
-}
-
-oddsratio.data.frame <- function(x,alpha=0.05,...)
-{
-  stopifnot(class(x)=='data.frame')
-  stopifnot(alpha>0&&alpha<1)
-  n11 = x[1,1]; n1 = x[1,2]; n12 = n1-n11
-  n21 = x[2,1]; n2 = x[2,2]; n22 = n2-n21
-  if(n12<0||n22<0) stop("Invalid data!")
-  OR = n11*n22/(n12*n21)
-  ##  var(log(OR))
-  CI = NULL
-  LL = NULL; UL = NULL;
-  if(n11==0 || n12==0 || n21==0||n22 == 0){
-    warning("Asymptotic confidence limits for OR are not computed.")
-  }else{
+    stopifnot(alpha>0&&alpha<1)
+    ##n11 = x[1,1]; n1 = x[1,2]; n12 = n1-n11
+    ##n21 = x[2,1]; n2 = x[2,2]; n22 = n2-n21
+    n11 <- x[1,1]; n12 <- x[2,1]; n1 <- n11+n12
+    n21 <- x[1,2]; n22 <- x[2,2]; n2 <- n21+n22
+    
+    if(n12<0||n22<0) stop("Invalid data!")
+    OR = n11*n22/(n12*n21)
+    ##  var(log(OR))
+    CI = NULL
+    LL = NULL; UL = NULL;
+    if(n11==0 || n12==0 || n21==0||n22 == 0){
+        warning("Asymptotic confidence limits for OR are not computed.")
+    }else{
     v <- 1/n11+1/n21+1/n12+1/n22
     ## v = sum(1/x); # Thanks mush go to Dr. Mike Schaffer for finding this bug. 
     z = abs(qnorm(alpha/2))

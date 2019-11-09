@@ -108,7 +108,7 @@ c     2013/04/01.
 
       nsum = 0
       do 50 i=1, m
-         nsum = nsum + f(i)
+         nsum = nsum + INT(f(i))
  50   enddo
       do 100 i=1, n
          f0(i) = fx(i)
@@ -166,7 +166,7 @@ C     Last changed: 26 Oct 2012
 
       subroutine yldist(gcnts, M, Y)
       double precision Y(*),gcnts(*),theta, sumcos,sumsin
-      integer n,M,l
+      integer M,l
       DATA PI2/6.2831853/
 
 c     Initialize Y_ell  to zero
@@ -204,15 +204,15 @@ c     Last changed: 05 Oct 2010
 
       subroutine ofcpdf(y,f,a,b,ny,x,nx,h)
       integer ny,nx,i,j,nsum
-      double precision y(ny),f(ny),w(ny),a(ny),b(ny),x(nx),h,
+      double precision y(ny),f(ny),a(ny),b(ny),x(nx),h,
      *     tmp, t1,t2,sqrt2h,sqrt2
       sqrt2 = sqrt(2.0)
       sqrt2h = sqrt2 * h
 
       nsum=0
       do 10 i=1,ny
- 10      nsum = nsum+f(i)
-
+         nsum = nsum + INT(f(i))
+ 10   continue
       do 100 i=1,nx
          tmp = 0.0
          do 90 j=1,ny
@@ -236,7 +236,7 @@ c     Last changed: 06 Oct 2010
 
       subroutine ofccdf(y,f,a,b,ny,x,nx,h)
       integer ny,nx,i,j,nsum
-      double precision y(ny),f(ny),w(ny),a(ny),b(ny),x(nx),h,
+      double precision y(ny),f(ny),a(ny),b(ny),x(nx),h,
      *     tmp, t1,t2,sqrt2h,sqrt2,PI,PI2,h2
       PI = 3.1415926536D0
       PI2 = 1./DSQRT(2.*PI)
@@ -246,8 +246,8 @@ c     Last changed: 06 Oct 2010
 
       nsum=0
       do 10 i=1,ny
- 10      nsum = nsum+f(i)
-
+         nsum = nsum + INT(f(i))
+ 10   continue
       do 100 i=1,nx
          tmp = 0.0
          do 90 j=1,ny
@@ -276,6 +276,7 @@ c     Last changed: 18 Oct 2010
      *     F0,F1,y0,dy,t1
 
       icounter=0
+      k = 1
       do 100 i=1,ny
 c     search for F1 and y1
          y0 = y(i) + a(i)
@@ -318,30 +319,6 @@ c     temporary using y0 to keep information
       
 cccccccccc End of remp.f cccccccccc
 
-
-C ===========================================================================
-      subroutine nrlogit(x1,beta,p,n)
-
-      implicit integer (I-N) 
-      double precision beta(3),p(n),fx,dfx,x1,logitp
-      J=0
-      fx = 1.0
-      DO 100 I = 1, n
-         logitp = LOG(p(I)/(1-p(I)))
- 10      IF((J .LT. 100) .AND. (ABS(fx) .GT. 0.000001)) THEN
-            fx = beta(1)-logitp+beta(2)*x1+beta(3)*LOG(x1)
-            dfx = beta(2)+beta(3)/x1
-            x1 = x1 - fx/dfx
-            IF(x1<0) THEN x1 = 0.001
-            J = J+1
-            GOTO 10
-         ENDIF
-
-         p(I) = x1
- 100  END DO
-      END
-
-
 c  Part of R package BDA
 c  Copyright (C) 2009-2010 Bin Wang
 c
@@ -367,7 +344,7 @@ c     2011/10/09.
 
       nsum = 0
       do 50 i=1, m
-         nsum = nsum + f(i)
+         nsum = nsum + INT(f(i))
  50   enddo
       do 100 i=1, n
          f0(i) = fx(i)
@@ -386,6 +363,7 @@ c     2011/10/09.
  250   enddo
 
        loop = 0
+       df = 1.0
        do while(loop .LT. iter .AND. df .GT. 0.0001)
           df = 0.0
           do 500 k=1,n
@@ -570,3 +548,4 @@ c     Find the subscripts of the counter
       end
 
 cccccccccc End of bintod cccccccccc
+

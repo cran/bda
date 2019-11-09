@@ -34,5 +34,8 @@
 .onUnload <- function(libpath)
   library.dynam.unload("bda",  libpath)
 
+.onAttach <- function(libname, pkgname)
+    packageStartupMessage("bda version 13 (Bin Wang, 2019)")
+
 .bdaConnect <- NULL
 

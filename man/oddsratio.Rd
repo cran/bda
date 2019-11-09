@@ -1,8 +1,5 @@
 \name{oddsratio}
 \alias{oddsratio}
-\alias{oddsratio.data.frame}
-\alias{oddsratio.matrix}
-\alias{oddsratio.default}
 \alias{print.odds}
 \title{Odds Ratio and Relative Risk}
 
@@ -10,12 +7,10 @@
 a 2 X 2 table.}
 
 \usage{
-  oddsratio(x,alpha=0.05,n,...)
+  oddsratio(x, alpha=0.05,...)
 }
 \arguments{
-  \item{x}{A vector of length 2 of the number of events from 
-  the case and control studies.}
-  \item{n}{A vector of length 2 of the sample sizes.}
+  \item{x}{a 2x2 table.}
   \item{alpha}{The significance level. Default: 0.05.}
   \item{...}{Controls}
 }
@@ -94,33 +89,4 @@ Inc.
 \code{\link{fisher.test}}, \code{\link{chisq.test}}
 }
 
-
-\examples{
-
-#  library(bstats)
-x = c(1,0)
-n = c(72370,73058)
-oddsratio(x,n=n)
-
-Convictions <-
-     matrix(c(2, 10, 15, 3),
-            nrow = 2,
-            dimnames =
-            list(c("Dizygotic", "Monozygotic"),
-                 c("Convicted", "Not convicted")))
-     Convictions
-     fisher.test(Convictions, conf.level = 0.95)$conf.int
-
-x = matrix(c(2,10,17,13), ncol=2)
-oddsratio(x)
-
-Convictions <-
-     matrix(c(8, 492, 0, 500), nrow = 2, byrow=TRUE)
-fisher.test(Convictions, conf.level = 0.95)$conf.int
-
-x = c(8,0)
-n = c(500,500)
-oddsratio(x,n=n)
-
-}
 \keyword{htest}

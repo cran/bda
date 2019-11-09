@@ -35,8 +35,6 @@
   hofc <- binning(x, bw=1)
   lmd7 <- fit.GB(hofc)
   plot(lmd7)
-  gof(lmd7)
-
 
 }
 \keyword{distribution}

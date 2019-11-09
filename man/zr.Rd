@@ -24,6 +24,6 @@ OFC data for singleton live births with gestational age at least 38 weeks in cit
 
 \examples{
  data(zr)
- zr
+ dim(zr)
 }
 \keyword{datasets}

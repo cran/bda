@@ -1,21 +1,32 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{fit.nmix.copula}
+\name{fit.NGS.nmix.copula}
 \alias{fit.nmix.copula}
-\alias{print.NGS.nmix.copula}
-\alias{plot.NGS.nmix.copula}
+\alias{fit.mlnorm.copula}
+\alias{fit.NGS.nmix.copula}
+\alias{fit.GLD.copula}
+\alias{fit.GLD2bin}
+\alias{print.copula}
+\alias{print.copula2}
+\alias{persp.copula}
 
 \title{Fit a Bivariate Copula Based on Normal Mixture Model for NGS data}
 \description{
    Fit bivariate copula for normal mixture models}
 \usage{
-  fit.nmix.copula(x,y,mle.large=FALSE)
+  fit.NGS.nmix.copula(x,y,mle.large=FALSE,gridsize=101)
+  fit.nmix.copula(x,y,mle.large=FALSE,gridsize=101)
+  fit.GLD.copula(x,y,mle.large=FALSE,gridsize=101)
+  fit.mlnorm.copula(x,y,mle.large=FALSE,gridsize=101,k=2)
 }
 \arguments{
   \item{x,y}{Two Next-Generation Sequencing data with same structures}
   \item{mle.large}{Default \code{,mle.large=FALSE}, don't use the big
   two-way histogram to find MLE.}
+  \item{gridsize}{The size of the grid in the xy-plane to evaluate the
+  joint density.}
+  \item{k}{number of components}
 }
 
 \author{
