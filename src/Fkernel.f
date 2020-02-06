@@ -21,9 +21,9 @@ c     Last changed: 19 APRIL 2013
       
 c     Initialize grid counts to zero
       
-      do 10 i=1,M
+      do i=1,M
          gcnts(i) = dble(0)
- 10   continue
+      end do
       
       delta = (xb - xa)/(M - 1)
 c     KDE using FFT
@@ -93,8 +93,8 @@ ccccccccccFORTRAN subroutine smoothkde cccccccccc
 c     2013/04/01.
 
       subroutine smoothkde(fx,x0,n,x,f,m,w,h,iter)
-      integer m,n,i,j,iter, nsum,k,i1,i2,loop
-      double precision fx(n),f0(n),x0(n),x(m),f(m),h,w
+      integer m,n,i,j,iter, k,i1,i2,loop
+      double precision nsum, fx(n),f0(n),x0(n),x(m),f(m),h,w
       double precision wd, dx, fk(n,n),gk(n),df
       double precision t1,t2, xl,xu
 
@@ -106,27 +106,27 @@ c     2013/04/01.
       twoh = -0.5/h/h
       twopih = 1.0/sqrt(twopi)/h
 
-      nsum = 0
-      do 50 i=1, m
-         nsum = nsum + INT(f(i))
- 50   enddo
-      do 100 i=1, n
+      nsum = 0.
+      do i=1, m
+         nsum = nsum + f(i)
+      end do
+      do i=1, n
          f0(i) = fx(i)
- 100  enddo
-      do 150 i=1, n
+      end do
+      do i=1, n
          t1 = dx*(i-1.0)/h
          gk(i) = twopih * exp(-0.5*t1*t1)
- 150  enddo
+      end do
 
 
-      do 250 i=1, n-1
+      do i=1, n-1
          fk(i,i) = gk(1)
-         do 200 j=i+1, n
+         do j=i+1, n
             fk(i,j) = gk(j-i)
             fk(j,i) = fk(i,j)
- 200      enddo
- 250   enddo
-       fk(n,n) = gk(1)
+         enddo
+      enddo
+      fk(n,n) = gk(1)
 
        loop = 0
        df = 1.0
@@ -203,15 +203,15 @@ c     uniform rounding errors
 c     Last changed: 05 Oct 2010
 
       subroutine ofcpdf(y,f,a,b,ny,x,nx,h)
-      integer ny,nx,i,j,nsum
-      double precision y(ny),f(ny),a(ny),b(ny),x(nx),h,
+      integer ny,nx,i,j
+      double precision nsum, y(ny),f(ny),a(ny),b(ny),x(nx),h,
      *     tmp, t1,t2,sqrt2h,sqrt2
       sqrt2 = sqrt(2.0)
       sqrt2h = sqrt2 * h
 
-      nsum=0
+      nsum=0.
       do 10 i=1,ny
-         nsum = nsum + INT(f(i))
+         nsum = nsum + f(i)
  10   continue
       do 100 i=1,nx
          tmp = 0.0
@@ -235,8 +235,8 @@ c     uniform rounding errors
 c     Last changed: 06 Oct 2010
 
       subroutine ofccdf(y,f,a,b,ny,x,nx,h)
-      integer ny,nx,i,j,nsum
-      double precision y(ny),f(ny),a(ny),b(ny),x(nx),h,
+      integer ny,nx,i,j
+      double precision nsum, y(ny),f(ny),a(ny),b(ny),x(nx),h,
      *     tmp, t1,t2,sqrt2h,sqrt2,PI,PI2,h2
       PI = 3.1415926536D0
       PI2 = 1./DSQRT(2.*PI)
@@ -244,9 +244,9 @@ c     Last changed: 06 Oct 2010
       sqrt2h = sqrt2 * h
       h2 = h * h
 
-      nsum=0
+      nsum=0.
       do 10 i=1,ny
-         nsum = nsum + INT(f(i))
+         nsum = nsum + f(i)
  10   continue
       do 100 i=1,nx
          tmp = 0.0
@@ -329,8 +329,8 @@ cccccccccc FORTRAN subroutine iterfx.f cccccccccc
 c     2011/10/09.
 
       subroutine iterfx(fx,x0,n,x,f,m,w,h,iter)
-      integer m,n,i,j,iter, nsum,k,i1,i2,loop
-      double precision fx(n),f0(n),x0(n),x(m),f(m),h,w
+      integer m,n,i,j,iter,k,i1,i2,loop
+      double precision nsum,fx(n),f0(n),x0(n),x(m),f(m),h,w
       double precision wd, dx, fk(n,n),gk(n),df
       double precision t1,t2, xl,xu
 
@@ -342,9 +342,9 @@ c     2011/10/09.
       twoh = -0.5/h/h
       twopih = 1.0/sqrt(twopi)/h
 
-      nsum = 0
+      nsum = 0.
       do 50 i=1, m
-         nsum = nsum + INT(f(i))
+         nsum = nsum + f(i)
  50   enddo
       do 100 i=1, n
          f0(i) = fx(i)

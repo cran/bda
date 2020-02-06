@@ -3,12 +3,7 @@
 
 \name{lpsmooth}
 \alias{lpsmooth}
-\alias{lpsmooth.default}
-\alias{lpsmooth.histogram}
-\alias{lpsmooth.bdata}
-\alias{print.smooth}
-\alias{plot.smooth}
-\alias{lines.smooth}
+\alias{print.scb}
 
 \title{non-parametric regression}
 
@@ -40,8 +35,14 @@
   \item{conf.level}{Confidence level.}
 }
 
-\author{
-  B. Wang  \email{bwang@southalabama.edu}
+\value{
+ \item{y}{Estimated values of the smooth function over a fine grid.}
+ \item{x}{grid points where the smoothed function are evaluated.}
+ \item{x0,y0}{cleaned data of x and y.}
+ \item{conf.level}{confidence level of the simultaneous confidence bands.}
+ \item{pars}{estimate parameters including smoothing bandwidth, and parameters for the tube formula.}
+\item{ucb,lcb}{upper and lower confidence bands.}
+\item{call}{function called}
 }
 
 \examples{
@@ -51,7 +52,7 @@
  y <- (x-32)^2 + e
  out <- lpsmooth(y,x)
  out
- plot(out, type='l', scb=TRUE)
+ plot(out, type='l')
  x0 <- seq(min(x),max(x),length=100)
  y0 <- (x0-32)^2
  lines(x0, y0, col=2)

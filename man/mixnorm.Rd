@@ -1,11 +1,11 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{mixnorm}
-\alias{pmixnorm}
-\alias{dmixnorm}
-\alias{qmixnorm}
-\alias{rmixnorm}
+\name{mnorm}
+\alias{pmnorm}
+\alias{dmnorm}
+\alias{qmnorm}
+\alias{rmnorm}
 
 \title{The mixed normal distribution}
 
@@ -16,10 +16,10 @@
  'mu' and standard deviations equal to 's'.}
 
 \usage{
-	dmixnorm(x,p,mean,sd)
-	pmixnorm(q,p,mean,sd)
-	qmixnorm(prob,p,mean,sd)
-	rmixnorm(n,p,mean,sd)
+	dmnorm(x,p,mean,sd)
+	pmnorm(q,p,mean,sd)
+	qmnorm(prob,p,mean,sd)
+	rmnorm(n,p,mean,sd)
 }
 \arguments{
   \item{x,q}{vector of quantiles in dmixnorm and pmixnorm. 
@@ -31,19 +31,18 @@
   \item{mean}{vector of means}
   \item{sd}{vector of standard deviations}
 }
-\author{
-  B. Wang  \email{bwang@southalabama.edu}
-}
+
+\value{Return the density, probability, quantile and random value, respectively.}
 
 \examples{
 
 p <- c(.4,.6)
 mu <- c(1,4)
 s <- c(2,3)
-dmixnorm(c(0,1,2,20),p,mu,s)
-pmixnorm(c(0,1,2,20),p,mu,s)
-qmixnorm(c(0,1,.2,.20),p,mu,s)
-rmixnorm(3,p,mu,s)
+dmnorm(c(0,1,2,20),p,mu,s)
+pmnorm(c(0,1,2,20),p,mu,s)
+qmnorm(c(0,1,.2,.20),p,mu,s)
+rmnorm(3,p,mu,s)
 
 }
 \keyword{distribution}

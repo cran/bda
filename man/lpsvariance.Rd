@@ -35,10 +35,9 @@
    Defaulty method: \code{Rice}.}
 }
 
-\author{
-  B. Wang  \email{bwang@southalabama.edu}
+\value{
+the variance of r(x).
 }
-
 \examples{
 
 n = 100
@@ -51,7 +50,7 @@ out=lpsmooth(y,x)
 vrx = lps.variance(y,x)
 out=lpsmooth(y,x,sd.y=sqrt(vrx), bw=0.5)
 plot(y~x, pch='.')
-lines(out, scb=TRUE, col=2)
+lines(out, col=2)
 
 x0 = seq(min(x),  max(x), length=100)
 y0 = x0^2

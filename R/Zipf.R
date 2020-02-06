@@ -10,14 +10,7 @@ ZipfPlot <- function(x, x0, plot.new=TRUE, fitted=TRUE,weights,...){
                         fitted=fitted,
                         weights=weights, ...)
     }else if(is.numeric(x)){
-        ##if(fitted){
-        ##out <- .zipf(x,x0,
-        ##plot.new=plot.new,
-        ##fitted=fitted,
-        ##weights=weights, ...)
-        ##}else{
         out <- .Zipf(x)
-        ##}
     }else
         stop("data type not supported")
     out
@@ -346,9 +339,6 @@ ZPlot <- function(x, plot.new=TRUE,...){
 Zipf.Normalize <- function(x, y, cutoff=6, optim=FALSE,method){
     xnam = deparse(substitute(x))
     ynam = deparse(substitute(y))
-    cat("\nReference profile: ", xnam)
-    cat("\nProfile to be normalized: ", ynam,"\n\n")
-
     if(missing(method)){
         out <- .ZNorm(x=x,y=y,cutoff=cutoff,optim=optim)
     }else{

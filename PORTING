@@ -1,7 +1,1 @@
-v11.7.1: rerwite fit.lognormal function.
-v10.5.6: add a test to check whether a gene is marginally expressed or 
-  not expressed. A fnmm will be fitted only if evidence shows that the 
-  gene is expressed at a measurable level.  Otherwise, no further tests
-  need to be performed for DEG detection.
-v10.5.1: rewrite perm.test.NGS function for user-defined functions to 
-  compute statistics.
+2019/11/28 Initialize the package 

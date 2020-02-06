@@ -1,12 +1,4 @@
 
-##  Part of R package BDA
-##  Copyright (C) 2009-2010 Bin Wang
-##
-##  Unlimited use and distribution (see LICENCE).
-
-##  2012/10/31: define four functions for a mixture of k normal
-##  components f(x) = \sum p_i * dnorm(x,mu_i, sigma_i)
-
 .dmnorm <- function(x,p,mean,sd){
   k <- length(p)
   res <- 0
@@ -16,14 +8,13 @@
   res
 }
 
-dmixnorm <- function(x,p,mean,sd){
+dmnorm <- function(x,p,mean,sd){
   if(missing(p)) p <- 1
   if(missing(mean)) mean <- 0
   if(missing(sd)) sd <- 1
   ndim <- length(p)
   if(length(mean) != ndim | length(sd) != ndim)
     stop("Parameters have different lengths")
-##  if(any(p>1|p<0)) stop("Wrong mixing coefficients")
   p[p<0] <- 0.00001
   p <- p/sum(p)
   if(any(sd<=0)) stop("Invalid standard deviation(sd)")
@@ -40,7 +31,7 @@ dmixnorm <- function(x,p,mean,sd){
   res
 }
 
-pmixnorm <- function(q,p,mean,sd){
+pmnorm <- function(q,p,mean,sd){
   if(missing(p)) p <- 1
   if(missing(mean)) mean <- 0
   if(missing(sd)) sd <- 1
@@ -63,7 +54,7 @@ pmixnorm <- function(q,p,mean,sd){
   x[which(runif(1)-cump<=0)[1]]
 }
 
-rmixnorm <- function(n,p,mean,sd){
+rmnorm <- function(n,p,mean,sd){
   if(missing(p)) p <- 1
   if(missing(mean)) mean <- 0
   if(missing(sd)) sd <- 1
@@ -86,7 +77,7 @@ rmixnorm <- function(n,p,mean,sd){
   as.numeric(res)
 }
 
-qmixnorm <- function(prob,p,mean,sd){
+qmnorm <- function(prob,p,mean,sd){
   if(missing(p)) p <- 1
   if(missing(mean)) mean <- 0
   if(missing(sd)) sd <- 1
@@ -107,3 +98,4 @@ qmixnorm <- function(prob,p,mean,sd){
   Fx <- sapply(x,.pmnorm,p=p,mean=mean,sd=sd)
   approx(Fx,x,prob)$y
 }
+

@@ -386,27 +386,36 @@ void lpsmooth(double *xgrid, int *ngrid, double *x, double *y,
 	      int *adapt, double *ellx, double *kappa)
 {
   int i;
-  double rhat[ngrid[0]], hopt=bw[0],alpha=0.0;
+  double rhat[ngrid[0]], rhat2[size[0]],hopt=bw[0],alpha=0.0;
 
   for(i=0; i<ngrid[0]; i++){
     rhat[i] = 0.0;
+  }
+  for(i=0; i<size[0]; i++){
+    rhat2[i] = 0.0;
   }
 
   if(lscv[0] == 1){
     if(adapt[0]==0){
       hopt = lprlscv(x,y,size[0],hopt);
       lpreg(xgrid, ngrid[0],x,y,size[0],hopt,rhat,ellx);
+      lpreg(x, size[0],x,y,size[0],hopt,rhat2,ellx);
     }else{
       alprlscv(x,y,size[0],hopt, alpha);
       alpreg(xgrid, ngrid[0],x,y,size[0],hopt,alpha,rhat,ellx);
+      alpreg(x, size[0],x,y,size[0],hopt,alpha,rhat2,ellx);
     }
   }else{
     lpreg(xgrid, ngrid[0],x,y,size[0],hopt,rhat,ellx);
+    lpreg(x, size[0],x,y,size[0],hopt,rhat2,ellx);
   }
   
   bw[0] = hopt;
   for(i=0; i<ngrid[0]; i++){
     xgrid[i] = rhat[i];
+  }
+  for(i=0; i<size[0]; i++){
+    y[i] = rhat2[i];
   }
 
   Fvdi f[1];

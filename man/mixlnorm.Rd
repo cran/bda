@@ -31,9 +31,8 @@
   \item{mean}{vector of means}
   \item{sd}{vector of standard deviations}
 }
-\author{
-  B. Wang  \email{bwang@southalabama.edu}
-}
+
+\value{return the density, probability, quantile and random value for the four functions, respectively.}
 
 \examples{
 

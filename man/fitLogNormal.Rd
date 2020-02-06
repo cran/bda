@@ -1,55 +1,37 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{fit.mlnorm}
-\alias{fit.mlnorm}
-\alias{fit.blnorm}
+\name{fit.lnorm}
+\alias{fit.lnorm}
 \alias{fit.lognormal}
-\alias{print.NGS.lognormal}
-\alias{plot.NGS.lognormal}
-\alias{lines.NGS.lognormal}
-\alias{print.lnmix}
-\alias{plot.lnmix}
-\alias{lines.lnmix}
+\alias{mixlognormal}
+\alias{print.mixlognormal}
+\alias{ddeg}
+\alias{NGS.normalize}
+\alias{fit.mlnorm}
 
-\title{Fit a log-normal distribution to (binned) NGS data}
+\title{Fitting log-normal distributions}
 \description{
-   Fit a log-normal distribution to (binned) NGS data
-   }
+ To fit log-normal distributions to raw data.
+}
 \usage{
-  fit.mlnorm(x, method="mixed", k=1, gridsize=1000,optim=TRUE)
-  fit.lognormal(x, method='mle')
+fit.lognormal(x, k=1)
 }
 \arguments{
-  \item{x}{Next-Generation Sequencing data or similar.
-  Could have a lot of zeros but negative values are not
-  allowed}
-  \item{method}{choose fitting method. For fit.mlnorm, options include
-  "Monte Carlo method", and "Maximum Likelihood method". 
-  For fit.lognormal, two options: 'mle' or 'percentile' -- percentile
-  matching method.}
-  \item{gridsize}{size of grid where densities will be evaluated.}
-  \item{k}{Number of components.}
-  \item{optim}{Choose the best model if 'true'.}
+  \item{x}{Raw data or grouped data}
+  \item{k}{number of components, Default: 1}
 }
-
-\author{
-  B. Wang  \email{bwang@southalabama.edu}
-}
-
-\details{
-We fit a mixture model to take care the zero values using component-0.
-}
-
-\references{
-  AS 254, ...  
+\value{
+ \item{p0}{The estimated proportion of zeros.}
+ \item{p,mean,sigma}{The fitted parameters of mixing coefficients, means and standard deviations of the k normal components.}
+ \item{n}{The sample size of data.}
+ \item{npar}{Number of parameters to be estimated.}
+ \item{llk}{Estimated log-likelihood.}
 }
 \examples{
- # To be updated.
- x = rexp(100,1)
- x = c(rep(0,20),x)
- out = fit.NGS(x)
- plot(out)
+ mu = -.5
+ s = 2
 }
-\keyword{smooth}
+
+\keyword{distribution}
 
