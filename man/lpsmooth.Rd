@@ -12,7 +12,7 @@
 }
 
 \usage{
- lpsmooth(y,x, bw, sd.y,lscv=FALSE, adaptive=FALSE,
+ lpsmooth(y,x, bw, sd.y,sd.x,lscv=FALSE, adaptive=FALSE,
  	  from, to, gridsize,conf.level=0.95)
 }
 \arguments{
@@ -32,6 +32,7 @@
   could be extremeely slow when the sample size is very large.}
 
   \item{sd.y}{Standard deviation of \code{y}.}
+  \item{sd.x}{Standard deviation of the measurement error \code{x}.}
   \item{conf.level}{Confidence level.}
 }
 

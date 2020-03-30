@@ -8,8 +8,24 @@ S3method(print, VAS)
 S3method(plot, VAS) 
 S3method(lines, VAS) 
 
+S3method(print, bdata) 
+S3method(plot, bdata)
+S3method(binning, default)
+S3method(binning, histogram)
+
+S3method(print, FSD) 
+S3method(plot, FSD) 
+S3method(lines, FSD) 
+S3method(ZipfPlot, FSD) 
+S3method(ZipfPlot, default) 
+S3method(ZipfPlot, histogram) 
+S3method(ZipfPlot, bdata) 
+
 importFrom("stats", "approx", "dlnorm", "dnorm", "plnorm", "pnorm",
            "rlnorm", "rnorm", "runif", "lm", "qnorm", "sd", "pchisq",
-           "bw.nrd","density", "median", "quantile", "qt")
+           "bw.nrd","density", "median", "quantile", "qt", "coef",
+           "optim","optimize","pexp","uniroot","pweibull","dweibull",
+           "chisq.test","dexp")
 
-importFrom("graphics", "lines", "abline", "plot", "points")
+importFrom("graphics", "lines", "abline", "plot", "points", "hist",
+	   "contour")

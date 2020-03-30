@@ -36,7 +36,7 @@
 \references{
 Wang, B. (2020)
 A Zipf-plot based normalization method for high-throughput RNA-Seq data.
-PLoS ONE, (Submitted).
+PLoS ONE, (in press).
 }
 
 \examples{

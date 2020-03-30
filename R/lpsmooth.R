@@ -105,100 +105,128 @@ lps.variance <- function(y,x, gridsize, bw, method="Rice"){
 ## could be extremeely slow when the sample size is very large.
 
 lpsmooth <-
-    function(y,x,bw,sd.y,lscv=FALSE, adaptive=FALSE,
+    function(y,x,bw,sd.y,sd.x,lscv=FALSE, adaptive=FALSE,
              from,to,gridsize,conf.level=0.95)
-    {
-            sele <- is.na(y)|is.na(x)
-            y <- y[!sele]; x <- x[!sele]
-
-            size.limit <- 1000
-            n <- length(y)
-            if(missing(from)) from <- min(x)
-            if(missing(to)) to <- max(x)
-            stopifnot(to > from)
-        
-            if(missing(bw)){
-                if(n < size.limit){
-                    lscv <- 1
-                    bw <- bw.nrd(x)
-                    adaptive = 1  # use adaptive bandwidth selector
-                    lscv <- 0
-                }else{
-                    stop("'bw' is missing.")
-                }
-            }else{
-                stopifnot(bw>0)
-            }
-
-            if(n >= size.limit){
-                if(lscv || adaptive)
-                    stop("sample size is too large.")
-                lscv <- 0
-                adaptive <- 0
-            }else{
-                lscv <- ifelse(lscv, 1, 0)
-                adaptive <- ifelse(adaptive, 1, 0)  
-            }
-            
-            ##  Compute the variance based on the raw data
-            if(missing(sd.y)){
-                sd.y <- lps.variance(y=y,x=x,bw=bw)
-            }else{
-                stopifnot(is.numeric(sd.y))
-                stopifnot(!any(sd.y < 0))
-            }
-        
-            if(missing(gridsize)) gridsize <- 512L
-            stopifnot(gridsize > 10)
-
-
-            gpoints <- seq(from, to, length=gridsize)
-            n <- length(x)
-            stopifnot(length(y) == n)
-            if(any(is.na(x)|is.na(y)))
-                stop("Missing value(s) in 'x' and/or 'y'")
-            if(any(!is.finite(x)|!is.finite(y)))
-                stop("Inifite value(s) in 'x' and/or 'y'")
-            out <- .Fortran(.F_lpsmooth,
-                            fx = as.double(gpoints),
-                            as.integer(gridsize),
-                            as.double(x),
-                            y=as.double(y),
-                            as.integer(n),
-                            bw = as.double(bw),
-                            as.integer(lscv),
-                            as.double(c(from, to)),
-                            as.integer(adaptive),
-                            ellx = double(gridsize),
-                            kappa=double(1))
-            
-            ## print(out$kappa)
-            stopifnot(conf.level<1 & conf.level >0)
-            
-            cv <-  .Fortran(.F_tubecv,
-                            cv=as.double(out$kappa),
-                            as.double(conf.level))$cv
-            ## print(cv)
-            y0 <- out$y
-            y = out$fx
-            sele1 = is.na(y) | !is.finite(out$fx)
-            if(any(sele1)) y[sele1] = 0.0
-            MOE <- cv * out$ellx * sd.y
-            ll = y - MOE; ##ll[ll<0] <- 0
-            ul = y + MOE;
-            
-            pars <- list(cv=cv, kappa=out$kappa,
-                         bw=out$bw)
-            
-            structure(list(y = y, x = gpoints,
-                           x0 = x, y0 = y0,
-                           conf.level = conf.level,
-                           pars = pars,
-                           ucb=ul, lcb=ll,
-                           call = match.call()
-                           ),
-                      class = 'scb')
+{
+    stopifnot(conf.level<1 & conf.level >0)
+    sele <- is.na(y)|is.na(x)
+    y <- y[!sele]; x <- x[!sele]
+    
+    size.limit <- 1000
+    n <- length(y)
+    if(missing(from)) from <- min(x)
+    if(missing(to)) to <- max(x)
+    stopifnot(to > from)
+    
+    if(missing(bw)){
+        if(n < size.limit){
+            lscv <- 1
+            bw <- bw.nrd(x)
+            adaptive = 1  # use adaptive bandwidth selector
+            lscv <- 0
+        }else{
+            stop("'bw' is missing.")
         }
+    }else{
+        stopifnot(bw>0)
+    }
+    
+    if(n >= size.limit){
+        if(lscv || adaptive)
+            stop("sample size is too large.")
+        lscv <- 0
+        adaptive <- 0
+    }else{
+        lscv <- ifelse(lscv, 1, 0)
+        adaptive <- ifelse(adaptive, 1, 0)  
+    }
+    
+    ##  Compute the variance based on the raw data
+    if(missing(sd.y)){
+        sd.y <- lps.variance(y=y,x=x,bw=bw)
+    }else{
+        stopifnot(is.numeric(sd.y))
+        stopifnot(!any(sd.y < 0))
+    }
+    
+    if(missing(sd.x)){
+        sd.x <- 0
+    }else{
+        stopifnot(is.numeric(sd.x))
+        stopifnot(sd.x >= 0)
+    }
+    
+    if(missing(gridsize)) gridsize <- 512L
+    stopifnot(gridsize > 10)
+    
+    
+    gpoints <- seq(from, to, length=gridsize)
+    n <- length(x)
+    stopifnot(length(y) == n)
+    if(any(is.na(x)|is.na(y)))
+        stop("Missing value(s) in 'x' and/or 'y'")
+    if(any(!is.finite(x)|!is.finite(y)))
+        stop("Inifite value(s) in 'x' and/or 'y'")
+
+    out <- .Fortran(.F_lpsmooth,
+                    fx = as.double(gpoints),
+                    as.integer(gridsize),
+                    as.double(x),
+                    y=as.double(y),
+                    as.integer(n),
+                    bw = as.double(bw),
+                    as.integer(lscv),
+                    as.double(c(from, to)),
+                    as.integer(adaptive),
+                    ellx = double(gridsize),
+                    kappa=double(1))
+    y0 <- out$y
+    y1 <- out$fx
+    ellx <- out$ellx
+    kappa <- out$kappa
+    
+    cv <-  .Fortran(.F_tubecv,
+                    cv=as.double(out$kappa),
+                    as.double(conf.level))$cv
+
+    if(sd.x > 0){
+        out <- .Fortran(.F_llrme,
+                        fx = as.double(gpoints),
+                        as.integer(gridsize),
+                        as.double(x),
+                        y=as.double(y),
+                        as.integer(n),
+                        bw = as.double(bw),
+                        as.integer(lscv),
+                        as.double(c(from, to)),
+                        as.integer(adaptive),
+                        double(gridsize),
+                        double(sd.x))
+        y0 <- out$y
+        y1 <- out$fx
+    }
+
+    bw <- out$bw
+    pars <- list(cv=cv, kappa=kappa, bw=bw)
+
+    y <- y1
+    sele1 = is.na(y) | !is.finite(y)
+    if(any(sele1)) y[sele1] = 0.0
+    
+    MOE <- cv * ellx * sd.y
+    ll = y - MOE; ##ll[ll<0] <- 0
+    ul = y + MOE;
+    
+    
+    structure(list(y = y, x = gpoints,
+                   x0 = x, y0 = y0,
+                   conf.level = conf.level,
+                   pars = pars,
+                   ucb=ul, lcb=ll,
+                   call = match.call()
+                   ),
+              class = 'scb')
+}
 
 print.scb <- function(x,...){
     print(x$pars,...)

@@ -37,7 +37,10 @@ void hbmise(double *x, double *f, double *h, int *n, double *hopt);
 void F77_SUB(ofcpdf)(double *y, double *f,double *a, double *b,
 		     int *ny, double *x, int *nx, double *bw);
 void F77_SUB(remp)(int *n,double *y,double *f, double *a, double *b,
-		   int *m, double *Fx, double *x, double *u, int *ntotal);
+		   int *m, double *Fx, double *x, double *u, 
+		   int *ntotal);
+void F77_SUB(mlensimp)(double *w, double *f,double *a, double *b,
+		     int *n, double *theta);
 
 // ckernel.c
 void orexactl(int *counts, double *alpha, double *out);
@@ -111,6 +114,10 @@ void lpsmooth(double *xgrid, int *ngrid, double *x, double *y,
 	      double *range, int *adaptive, double *ellx, 
 	      double *kappa);
 
+void llrme(double *xgrid, int *ngrid, double *x, double *y, 
+	      int *size, double *bw, int *lscv, 
+	      double *range, int *adaptive, double *ellx, 
+	      double *kappa);
 
 //  KernelWKDE.c  
 void BDMLE(double *f, double *a, double *b, int *nbin,
@@ -126,21 +133,18 @@ void mle1Pareto(double *cnts, double *b, int *nclass,
 void mle2Pareto(double *cnts, double *b, int *nclass,
 		double *xm, double *alpha);
 
-//  cbootkde.c/fbootkde.f
-void hbmise(double *x, double *f, double *h, int *n, double *hopt);
 
 static const R_FortranMethodDef FortEntries[] = {
   {"KSPvalue", (DL_FUNC) & KSPvalue, 1},
   {"KSP2x", (DL_FUNC) & KSP2x, 2},
   {"pks2", (DL_FUNC) & pks2, 3},
 
-  {"hbmise", (DL_FUNC) & hbmise, 5},
-
   {"BDMLE", (DL_FUNC) & BDMLE, 7},
   {"bdregmle", (DL_FUNC) & bdregmle, 7},
 
   {"tubecv", (DL_FUNC) & tubecv, 2},
   {"lpsmooth", (DL_FUNC) & lpsmooth, 11},
+  {"llrme", (DL_FUNC) & llrme, 11},
   {"DesignMatrix", (DL_FUNC) & DesignMatrix, 4},
 
   {"rootGldFmklBisection", (DL_FUNC) & rootGldFmklBisection, 2},
@@ -171,6 +175,11 @@ static const R_FortranMethodDef FortEntries[] = {
 
   {"orexactl", (DL_FUNC) & orexactl, 3},
   {"orexactu", (DL_FUNC) & orexactu, 3},
+
+  {"hbmise", (DL_FUNC) & hbmise, 5},
+  {"ofcpdf", (DL_FUNC) &F77_SUB(ofcpdf), 8},
+  {"remp", (DL_FUNC) &F77_SUB(remp), 10},
+  {"mlensimp", (DL_FUNC) &F77_SUB(mlensimp), 6},
 
   {NULL, NULL, 0}
 };

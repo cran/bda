@@ -1,39 +1,51 @@
-ZipfPlot <- function(x, x0, plot.new=TRUE, fitted=TRUE,weights,...){
-    if(class(x)=="bdata"){
-        out <- .zipfbin(x$breaks,x$counts,x0,
-                        plot.new=plot.new,
-                        fitted=fitted,
+ZipfPlot <- function(x, x0, plot=FALSE,plot.new=TRUE,weights,...)
+    UseMethod("ZipfPlot")
+
+ZipfPlot.default <- function(x, x0, plot=FALSE,plot.new=TRUE,weights,...){
+    out <- .Zipf(x,plot=plot,plot.new=plot.new)
+    ##x <- as.numeric(x)
+    ##n <- length(x)
+    ##if(any(x<0)) warning("negative value(s) in 'x'")
+    ##tmp <- table(x)
+    ##Counts <- as.numeric(names(tmp))
+    ##Freq <- as.numeric(tmp)
+    ##x <- log(rev(Counts))
+    ##y <- log(cumsum(rev(Freq))/n)
+    ##if(plot.new){
+    ##    plot(x, y, ...)
+    ##}else{
+    ##    lines(x,y,...)
+    ##}
+}
+
+ZipfPlot.bdata <- function(x, x0, plot=FALSE,plot.new=TRUE,weights,...){
+    y <- x$xhist
+    brks <- x$breaks
+    if(length(brks)<4)
+        stop("too few classes")
+    else{
+        out <- .zipfbin(brks,x$freq,x0,plot=plot,
+                        plot.new = plot.new,
                         weights=weights, ...)
-    }else if(class(x)=="histogram"){
-        out <- .zipfbin(x$breaks,x$counts,x0,
-                        plot.new=plot.new,
-                        fitted=fitted,
-                        weights=weights, ...)
-    }else if(is.numeric(x)){
-        out <- .Zipf(x)
-    }else
-        stop("data type not supported")
+    }
     out
 }
 
-ZPlot <- function(x, plot.new=TRUE,...){
-    x <- as.numeric(x)
-    n <- length(x)
-    if(any(x<0)) warning("negative value(s) in 'x'")
-    tmp <- table(x)
-    Counts <- as.numeric(names(tmp))
-    Freq <- as.numeric(tmp)
-    x <- log(rev(Counts))
-    y <- log(cumsum(rev(Freq))/n)
-    if(plot.new){
-        plot(x, y, ...)
-    }else{
-        lines(x,y,...)
+ZipfPlot.histogram <- function(x, x0, plot=FALSE,plot.new=TRUE,weights,...){
+    brks <- x$breaks
+    if(length(brks)<4)
+        stop("too few classes")
+    else{
+        out <- .zipfbin(brks,x$counts,x0,
+                        plot=plot,
+                        plot.new=plot.new,
+                        weights=weights, ...)
     }
+    out
 }
 
-.zipfbin <- function(xbrks, fn, x0, plot.new=TRUE,
-                     weights, ...){
+.zipfbin <- function(xbrks, fn, x0, plot=FALSE,
+                     plot.new=TRUE,weights, ...){
     nclass <- length(fn)
     if(!missing(x0)){
         i <- which(xbrks >= x0)[1]
@@ -46,7 +58,8 @@ ZPlot <- function(x, plot.new=TRUE,...){
     }
     
     N <- sum(fn)
-    r <- N - cumsum(fn) + 1
+    Fn <- cumsum(fn)/(N+1)
+    r <- N*(1-Fn)
     xr <- xbrks[-1]
     k <- length(fn)
     if(!is.finite(xr[k])){
@@ -72,10 +85,6 @@ ZPlot <- function(x, plot.new=TRUE,...){
     
     if(any(X<0))
         stop("negative 'x' values not allowed")
-    if(plot.new)
-        plot(log(X), log(Rank), ...)
-    else
-        lines(log(X), log(Rank), ...)
     
     lmout <- lm(log(Rank)~log(X),weights=wts)
     out <- summary(lmout) 
@@ -84,7 +93,19 @@ ZPlot <- function(x, plot.new=TRUE,...){
     sea <- out$coef[2,2]
     seb <- out$coef[1,2]
     t0 <- qt(0.975,out$df[2])
-    abline(a=b, b=-alpha, ...)
+    slope <- -alpha
+    y.int <- b
+
+    if(plot){
+        if(plot.new){
+            plot(log(X), log(Rank),...)
+            if(summary(lmout)$r.squared>0.9)
+                abline(a=y.int, b=slope,col='gray')
+        }else{
+            lines(log(X), log(Rank),...)
+        }
+    }
+
     xm <- exp((b-log(N))/alpha)
     a1 <- alpha - t0*sea
     a2 <- alpha + t0*sea
@@ -133,10 +154,11 @@ ZPlot <- function(x, plot.new=TRUE,...){
         R.adj=round(radj,3)
     )
     
-    list(pars=res, best=out,y=log(Rank),x=log(X))
+    list(pars=res, best=out,y=log(Rank),x=log(X),
+         slope=slope,y.int=y.int)
 }
 
-.zipf <- function(x, x0,plot.new=TRUE, fitted=TRUE,weights,...){
+.zipf <- function(x, x0,plot.new=TRUE, weights,...){
     if(missing(x0))
         x0 <- 0
 
@@ -195,9 +217,7 @@ ZPlot <- function(x, plot.new=TRUE,...){
     sea <- out$coef[2,2]
     seb <- out$coef[1,2]
     t0 <- qt(0.975,out$df[2])
-    if(fitted){
-        abline(a=b, b=-alpha, ...)
-    }
+    abline(a=b, b=-alpha, ...)
     xm <- exp((b-log(N))/alpha)
     a1 <- alpha - t0*sea
     a2 <- alpha + t0*sea
@@ -213,16 +233,26 @@ ZPlot <- function(x, plot.new=TRUE,...){
     list(x=x0,y=y0,coef=res,model1=lmout,model2=lmout2)
 }
 
-.Zipf <- function(x){
+.Zipf <- function(x,plot=FALSE,plot.new=TRUE,...){
     x <- as.numeric(x)
     tmp <- table(x)
     Counts <- as.numeric(names(tmp))
+    if(length(Counts) < 4)
+        stop("too few distinct values")
     Freq <- as.numeric(tmp)
     mydat <- data.frame(Counts=Counts, Freq=Freq)
     log.X <- log(rev(Counts))
     log.R <- log(cumsum(rev(Freq)))
+    if(plot){
+        if(plot.new){
+            plot(log.R~log.X,...)
+        }else{
+            points(log.R~log.X,...)
+        }
+    }
     list(y=log.R, x=log.X)
 }
+
 
 .FindDmax <- function(pars, x, y, cutoff){
     gamma <- pars[1]

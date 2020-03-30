@@ -18,4 +18,11 @@ Comprehensive molecular portraits of human breast tumours.
 Nature,490(7418),61-70.
 }
 
+\examples{
+ data(BreastCancer)
+ head(normal)
+ head(primary)
+ head(meta)
+}
+
 \keyword{datasets}
