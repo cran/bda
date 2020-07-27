@@ -3,6 +3,9 @@
 
 \name{VAS}
 \alias{VAS.ecdf}
+\alias{VAS.pdf}
+\alias{VAS.npr}
+\alias{wdekde}
 \alias{print.VAS}
 \alias{plot.VAS}
 \alias{lines.VAS}
@@ -12,10 +15,11 @@
   Algorithms for VAS. The algorithms are applicable to other numerical variables with measurement errors as well.
 }
 \usage{
- VAS.ecdf(x,alpha=0.05)
+ VAS.ecdf(x,w,alpha=0.05)
 }
 \arguments{
   \item{x}{Raw data}
+  \item{w}{weights}
   \item{alpha}{Significance level for confidence bands.}
 }
 

@@ -1,6 +1,6 @@
 Package: bda
-Version: 14.3.19
-Date: 2020-03-28
+Version: 15.0.2
+Date: 2020-07-27
 Title: Binned Data Analysis
 Author: Bin Wang <bwang831@gmail.com>
 Maintainer: Bin Wang <bwang831@gmail.com>
@@ -10,6 +10,6 @@ Description: Algorithms developed for binned data analysis,
   measurement error models for ordinal data analysis. 
 License: Unlimited
 NeedsCompilation: yes
-Packaged: 2020-03-30 00:35:33 UTC; bwang
+Packaged: 2020-07-27 14:36:49 UTC; bwang
 Repository: CRAN
-Date/Publication: 2020-03-30 04:10:03 UTC
+Date/Publication: 2020-07-27 15:30:02 UTC

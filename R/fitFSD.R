@@ -291,6 +291,10 @@ plot.FSD <- function(x,grid.size,Psi,plot.new=TRUE,...){
         y0 <- .dMEP(x0,x$pars[1],x$pars[2],x$pars[3])
     else if(x$dist=="pd"||x$dist=="pareto")
         y0 <- .dPD(x0,x$pars[1],x$pars[2])
+    else if(x$dist=="kde"||x$dist=="bkde")
+        y0 <- .dKDE(x0,x$pars[1],x$breaks,x$counts)
+    else if(x$dist=="spline")
+        y0 <- .dspline(x0,x$breaks,x$counts)
     else if(x$dist=="lnorm"||x$dist=="lognormal")
         y0 <- dlnorm(x0,x$pars[1],x$pars[2])
     else
@@ -331,9 +335,15 @@ plot.FSD <- function(x,grid.size,Psi,plot.new=TRUE,...){
     }else if(x$dist=="pd"||x$dist=="pareto"){
         y0 <- .dPD(x0,x$pars[1],x$pars[2])
         y1 <- .pPD(x0,x$pars[1],x$pars[2])
+    }else if(x$dist=="kde"||x$dist=="bkde"){
+        y0 <- .dKDE(x0,x$pars[1],x$breaks,x$counts)
+        y1 <- .pKDE(x0,x$pars[1],x$breaks,x$counts)
     }else if(x$dist=="lnorm"||x$dist=="lognormal"){
         y0 <- dlnorm(x0,x$pars[1],x$pars[2])
         y1 <- plnorm(x0,x$pars[1],x$pars[2])
+    }else if(x$dist=="spline"){
+        y0 <- .dspline(x0,x$breaks,x$counts)
+        y1 <- .pspline(x0,x$breaks,x$counts)
     }else{
         y0 <- .dgld(x0,x$pars)
         y1 <- .pgld(x0,x$pars)
@@ -374,10 +384,11 @@ print.FSD <- function(x,...){
 .fit.FSD1 <- function(x, breaks, dist="weibull"){
     res <- NULL
     dist <- match.arg(tolower(dist),
-                      c("weibull","pareto", "gpd","pd",
+                      c("weibull","pareto","gpd","pd",
                         "ewd","gld","gld1","gld2",
                         "mep","ep", "mixed","exp",
-                        "lnorm","lognormal"))
+                        "lnorm","lognormal","kde",
+                        "bkde","spline"))
     if(class(x)=="histogram"){
         brks <- x$breaks
         cnts <- x$counts
@@ -406,10 +417,14 @@ print.FSD <- function(x,...){
         res <- .fit.GLD(freq=cnts,breaks=brks,type=2)
     else if(dist=="pareto"||dist=="pd")
         res <- .fit.PD(freq=cnts,breaks=brks)
+    else if(dist=="kde"||dist=="bkde")
+        res <- .fit.KDE(freq=cnts,breaks=brks)
     else if(dist=="ep"||dist=="mep"||dist=="mixed")
         res <- .fit.MEP(freq=cnts,breaks=brks)
     else if(dist=="lnorm"||dist=="lognormal")
         res <- .fit.lnorm(freq=cnts,breaks=brks)
+    else if(dist=="spline")
+        res <- .fit.spline(freq=cnts,breaks=brks)
     else
         stop("distribution type not supported")
     
@@ -616,6 +631,85 @@ print.FSD <- function(x,...){
          x=x,y=y,y2=y2,lx=lx,ly=ly)
 }
 
+####################################################
+.dKDE <- function(x0, h.adj,x,f){
+    k <- length(x)
+    lb <- x[-k]
+    ub <- x[-1]
+    xc <- (lb+ub)/2
+    h <- (ub - lb)*h.adj
+    n <- length(x0)
+    if(any(h<=0))
+        stop("invalid break point(s)")
+    res <- .Fortran(.F_dKDE,
+                    y=as.double(x0),
+                    as.integer(n),
+                    as.double(xc),
+                    as.double(h),
+                    as.double(f),
+                    as.integer(k-1))
+    res$y
+}
+
+.pKDE <- function(x0, h.adj,x,f){
+    k <- length(x)
+    lb <- x[-k]
+    ub <- x[-1]
+    xc <- (lb+ub)/2
+    h <- (ub - lb)*h.adj
+    n <- length(x0)
+    if(any(h<=0))
+        stop("invalid break point(s)")
+    res <- .Fortran(.F_pKDE,
+                    y=as.double(x0),
+                    as.integer(n),
+                    as.double(xc),
+                    as.double(h),
+                    as.double(f),
+                    as.integer(k-1))
+    res$y
+}
+
+.fit.KDE <- function(freq,breaks){
+    x <- breaks
+    k <- length(x)
+    if(!is.finite(x[1]))
+        stop("the lower boundary of the first class must be finite")
+    if(!is.finite(x[k]))
+        stop("the upper boundary of the last class must be finite")
+    pars <- 1.0
+    y <- .dKDE(x, pars,breaks,freq)
+    y2 <- .pKDE(x, pars,breaks,freq)
+    
+    a <- x[1];b <- rev(x)[1]
+    lx <- seq(a,b,length=401)
+    ly <- .dKDE(lx, pars,breaks,freq)
+
+    Fx <- y2[-c(1,k)]
+    llk <- sum(log(diff(c(0,Fx,1)))*freq)
+    n <- sum(freq)
+    AIC0 <- .AIC(llk,1,n)
+    Dn.Zipf0 <- .funCOD(freq,Fx)
+    L0 <- .funL2(freq,Fx)
+    
+    
+    tmp <- data.frame(h.adj = pars,
+                      Dn.Zipf=Dn.Zipf0,
+                      Dn = L0,
+                      AIC = AIC0$AIC,
+                      BIC = AIC0$BIC,
+                      AICc = AIC0$AICc)
+    
+    rownames(tmp) <- c("KDE")
+  
+    list(pars=pars, aux=tmp,
+         Dn.Zipf=Dn.Zipf0,
+         Dn=L0,
+         AIC=AIC0$AIC,
+         BIC=AIC0$BIC,
+         AICc=AIC0$AICc,
+         x=x,y=y,y2=y2,lx=lx,ly=ly)
+}
 
 ####################################################
 .fit.GLD <- function(freq,breaks,type=2){
@@ -1941,4 +2035,90 @@ ImportFSD <- function(x, type, year){
     list(xy=xy, breaks=breaks,age=xh,size=yh)
 }
 
+####################################################
+.fit.spline <- function(freq,breaks){
+    pars <- 1
+    n <- sum(freq)
+    x <- breaks
+    k <- length(x)
+    y <- .dspline(x,breaks,freq)
+    y2 <- .pspline(x,breaks,freq)
+    a <- x[1];b <- rev(x)[1]
+    if(a<=0) a <- 0.1
+    if(!is.finite(b)) b <- 2*rev(x)[2]-rev(x)[3]
+    lx <- exp(seq(log(a),log(b),length=401))
+    ly <- .dspline(lx,breaks,freq)
 
+    Fx <- y2[-c(1,k)]
+    llk <- sum(log(diff(c(0,Fx,1)))*freq)
+    AIC0 <- .AIC(llk,1,n)
+    Dn.Zipf0 <- .funCOD(freq,Fx)
+    L0 <- .funL2(freq,Fx)
+    
+    
+    tmp <- data.frame(lambda = pars[1],
+                      Dn.Zipf=Dn.Zipf0,
+                      Dn = L0,
+                      AIC = AIC0$AIC,
+                      BIC = AIC0$BIC,
+                      AICc = AIC0$AICc)
+    
+    rownames(tmp) <- c("Spline")
+  
+    list(pars=pars, aux=tmp,
+         Dn.Zipf=Dn.Zipf0,Dn=L0,
+         AIC=AIC0$AIC,
+         BIC=AIC0$BIC,
+         AICc=AIC0$AICc,
+         x=x,y=y,y2=y2,lx=lx,ly=ly)
+}
+
+
+.dspline <- function(x, breaks,freq)
+    {
+        F <- freq;
+        n <- sum(F)
+        x0 <- breaks
+        k <- length(x0)
+        if(!is.finite(x0[k]))
+            x0[k] <- 10*x0[k-1]
+        dx <- diff(x0)
+        X <- x0[-1]-0.5*dx;
+        Y <- freq/sum(freq*dx)
+        A <- x0[-k]; B <- x0[-1]
+        x0 <- runif(n,rep(A,F),rep(B,F))
+        h <-  (1/(4*pi))^(1/10)*(243/(35*n))^(1/5)*sqrt(var(x0))*15^(1/5)
+        selex <- is.finite(x)
+        X <- c(x0[1],X)
+        Y <- c(0,Y)
+        out <- spline(X, Y, xout=x[selex])
+        f0 <- x 
+        f0[selex] <- out$y
+        f0[!selex] <- 0
+        f0[f0<0] <- 0
+        f0
+    }
+
+.pspline <- function(x, breaks,freq)
+    {
+        F <- freq;
+        n <- sum(F)
+        x0 <- breaks
+        k <- length(x0)
+        if(!is.finite(x0[k]))
+            x0[k] <- 10*x0[k-1]
+        X <- x0;
+        Y <- c(0, cumsum(freq)/(n+1))
+        A <- x0[-k]; B <- x0[-1]
+        x0 <- runif(n,rep(A,F),rep(B,F))
+        h <-  (1/(4*pi))^(1/10)*(243/(35*n))^(1/5)*sqrt(var(x0))*15^(1/5)
+        selex <- is.finite(x)
+        
+        out <- spline(X, Y, xout=x[selex])
+        f0 <- x 
+        f0[selex] <- out$y
+        f0[!selex] <- 0
+        f0[f0<0] <- 0
+        f0[f0>1] <- 1
+        f0
+    }

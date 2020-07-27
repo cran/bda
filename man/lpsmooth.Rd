@@ -3,6 +3,7 @@
 
 \name{lpsmooth}
 \alias{lpsmooth}
+\alias{wlpsmooth}
 \alias{print.scb}
 
 \title{non-parametric regression}
@@ -14,9 +15,13 @@
 \usage{
  lpsmooth(y,x, bw, sd.y,sd.x,lscv=FALSE, adaptive=FALSE,
  	  from, to, gridsize,conf.level=0.95)
+ wlpsmooth(y,x,w,s.x,bw,from,to,gridsize,conf.level=0.95)
 }
 \arguments{
   \item{y,x}{Two numerical vectors.}
+  \item{w}{weights}
+  \item{s.x}{standard deviation of the measurement error -- Laplacian
+ errors are assumed.}
   \item{from,to,gridsize}{start point, end point and size of a fine 
   grid where the EDF will be evaluated.}
   \item{bw}{Smoothing parameter.  Numeric or character value is 

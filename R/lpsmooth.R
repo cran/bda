@@ -4,8 +4,6 @@
 ## + e, and x = x.bar + e2.  Laplace error can be assumed for e2 to
 ## speed up the algorithm.
 
-
-
 ## we use four method to compute the variance of r(x).
 
 ## method 1) Larry Wasserman--nearly unbiased.  This method based on
@@ -105,10 +103,78 @@ lps.variance <- function(y,x, gridsize, bw, method="Rice"){
 ## could be extremeely slow when the sample size is very large.
 
 lpsmooth <-
-    function(y,x,bw,sd.y,sd.x,lscv=FALSE, adaptive=FALSE,
+    function(y,x,bw,sd.y,sd.x,lscv=FALSE,adaptive=FALSE,
              from,to,gridsize,conf.level=0.95)
 {
+    if(missing(sd.x)){
+        out <- .lps(y=y,x=x,bw=bw,sd.y=sd.y,sd.x=0,
+                    lscv=lscv,adaptive=adaptive,
+                    from=from,to=to,gridsize=gridsize,
+                    conf.level=conf.level)
+    }else{
+        out <- .lpseiv(y=y,x=x,bw=bw,sd.x=sd.x,lscv=lscv,
+                       adaptive=adaptive,
+                       from=from,to=to,gridsize=gridsize)
+    }
+    out
+}
+
+.lpseiv <- function(y,x,bw,sd.x,lscv,adaptive,
+                    from=from,to=to,gridsize=gridsize)
+{
+    nx <- length(x)
+    if(length(y) != nx)
+        stop("'x' and 'y' have different lengths")
+    if(length(sd.x)>1){
+        if(length(sd.x) != nx)
+            stop("'x' and 'sd.x' have different lengths")
+        if(any(sd.x < 0))
+            stop("invalid 'sd.x' value(s)")
+    }else{
+        sd.x <- rep(sd.x,nx)
+    }
+    
+    sele <- is.na(y)|is.na(x)
+    y <- y[!sele];
+    x <- x[!sele]
+    sd.x <- sd.x[!sele]
+    nx <- length(x)
+
+    optimal <- ifelse(adaptive, 1,-1) #<=0 no automatic bandwidth selection
+    loo <- ifelse(lscv, 1,-1) #<=0 no automatic bandwidth selection
+    if(missing(bw)){
+        bw <- .bwdmise(x, sd.x)
+    }else if(bw <= 0){
+        stop("invalid 'bw'.")
+    }
+
+    if(missing(from)) from <- min(x)
+    if(missing(to)) to <- max(x)
+    stopifnot(to > from)
+    if(missing(gridsize)) gridsize <- 512L
+    stopifnot(gridsize > 10)
+    gpoints <- seq(from, to, length=gridsize)
+
+    out <- .Fortran(.F_DkNpReg,
+                    as.double(x),
+                    as.double(y),
+                    as.double(sd.x),
+                    as.integer(nx),
+                    h = as.double(bw),
+                    y = as.double(gpoints),
+                    as.integer(gridsize),
+                    as.double(loo),
+                    gcv = as.double(optimal))
+    
+    list(y = out$y, x = gpoints, bw=out$h, gcv=out$gcv)
+}
+
+.lps <- function(y,x,bw,sd.y,sd.x,lscv=FALSE, adaptive=FALSE,
+                 from,to,gridsize,conf.level=0.95)
+{
     stopifnot(conf.level<1 & conf.level >0)
+    if(length(y) != length(x))
+        stop("'x' and 'y' have different lengths")
     sele <- is.na(y)|is.na(x)
     y <- y[!sele]; x <- x[!sele]
     
@@ -148,19 +214,19 @@ lpsmooth <-
         stopifnot(is.numeric(sd.y))
         stopifnot(!any(sd.y < 0))
     }
-    
-    if(missing(sd.x)){
-        sd.x <- 0
-    }else{
-        stopifnot(is.numeric(sd.x))
-        stopifnot(sd.x >= 0)
-    }
+
+    sd.x <- 0
+    ##if(missing(sd.x)){
+    ##    sd.x <- 0
+    ##}else{
+    ##    stopifnot(is.numeric(sd.x))
+    ##    stopifnot(sd.x >= 0)
+    ##}
     
     if(missing(gridsize)) gridsize <- 512L
     stopifnot(gridsize > 10)
-    
-    
     gpoints <- seq(from, to, length=gridsize)
+
     n <- length(x)
     stopifnot(length(y) == n)
     if(any(is.na(x)|is.na(y)))
@@ -188,23 +254,6 @@ lpsmooth <-
     cv <-  .Fortran(.F_tubecv,
                     cv=as.double(out$kappa),
                     as.double(conf.level))$cv
-
-    if(sd.x > 0){
-        out <- .Fortran(.F_llrme,
-                        fx = as.double(gpoints),
-                        as.integer(gridsize),
-                        as.double(x),
-                        y=as.double(y),
-                        as.integer(n),
-                        bw = as.double(bw),
-                        as.integer(lscv),
-                        as.double(c(from, to)),
-                        as.integer(adaptive),
-                        double(gridsize),
-                        double(sd.x))
-        y0 <- out$y
-        y1 <- out$fx
-    }
 
     bw <- out$bw
     pars <- list(cv=cv, kappa=kappa, bw=bw)
@@ -303,3 +352,90 @@ print.scb <- function(x,...){
                   class = 'scb')
     }
 
+wlpsmooth <- function(y,x,w,s.x,bw,from,to,gridsize,conf.level=0.95)
+{
+
+    if(missing(s.x)){
+        s.x <- 0
+    }else{
+        stopifnot(is.numeric(s.x))
+        stopifnot(length(s.x)==1)
+        stopifnot(s.x>=0)
+    }
+    
+    n <- length(y)
+    if(n<5)
+        stop("too few data points to fit a regression model")
+
+    stopifnot(length(x)==n)
+    if(missing(w)){
+        w <- rep(1/n,n)
+    }else{
+        stopifnot(length(w)==n)
+    }
+    sele <- is.na(x) | is.na(y) | is.na(w)
+    if(any(sele)){
+        if(sum(!sele) < 5)
+            stop("too many missing values")
+        x <- x[!sele]
+        y <- y[!sele]
+        w <- w[!sele]
+        n <- sum(!sele)
+    }
+    
+    if(missing(bw)){
+        bw <- bw.nrd(x)
+    }else{
+        stopifnot(is.numeric(bw))
+        stopifnot(length(bw)==1)
+        stopifnot(bw>0)
+    }
+    
+    if(missing(from)) from <- min(x)
+    if(missing(to)) to <- max(x)
+    stopifnot(to > from)
+    if(missing(gridsize)) gridsize <- 512L
+    stopifnot(gridsize > 10)
+    gpoints <- seq(from, to, length=gridsize)
+
+    out <- .Fortran(.F_wnpr,
+                    rx = as.double(gpoints),
+                    as.integer(gridsize),
+                    as.double(x),
+                    as.double(y),
+                    as.double(w),
+                    as.integer(n),
+                    bw = as.double(bw),
+                    as.double(s.x))
+    list(x=gpoints,y=out$rx,bw=out$bw)    
+}
+
+.bwdmise <- function(y,sig)
+  {
+      hnorm2 <- function(h1,sig,Rfx,n,grid=100,ub=2){
+          out <- .Fortran(.F_NormLap2,
+                          as.integer(n),
+                          as.double(Rfx),
+                          as.double(sig),
+                          h = as.double(h1),
+                          as.double(grid),
+                          as.double(ub))
+          out$h
+      }
+      
+      sig <- sig^2;
+      s2bar <- mean(sig);
+      sbar <- sqrt(s2bar);
+      s2y <- var(y);
+      Rfx <- 0.09375*(abs(s2y-s2bar))^(-2.5)*pi^(-.5); # R(f'')/4
+      ##cat("\nRfx=", Rfx,"\n")
+      n <- length(y);
+      h1 <- bw.nrd(y)
+      ##print(h1)
+      grid <- 100;
+      ub <- 2
+      
+      result <- hnorm2(h1,sig,Rfx,n,grid=grid,ub=ub)
+      ##print(result)
+      return(result);
+  }

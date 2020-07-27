@@ -9,6 +9,42 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
+// npr.c
+void DkNpReg(double *Z, double *Y, double *S, int *size, 
+	     double *bw, double *X, int *nx, 
+	     double *loo,double *opt);
+
+void NormLap2(int *n, double *Rfx,double *ss, double *h1,
+	      double *grid,double *ub);
+
+// wnpr.c
+void wnpr(double *xgrid, int *ngrid, double *x, double *y, 
+	  double *w, int *size, double *bw, double *sx);
+void wdekde(double *x, double *w, int *n, double *y, 
+	    int *ngrid, double *bw, double *sx);
+
+//wkde.c
+void awkde(double *y, double *w, int *n, double *x,double *fx, 
+	   double *Fx, int *m, double *pars);
+
+void wkde(double *y, double *w, int *n, double *x,double *fx, 
+	  double *Fx, int *m, double *pars);
+
+void wmise(double *x, double *w, int *n,
+	   double *h,double *g, int *m);
+//wkde.f
+void F77_SUB(wlinbin)(double *x, double *w, int *n, double *a,
+		      double *b, int *m, int *trun, double *gcounts);
+
+void F77_SUB(yldist)(double *gcounts, int *m, double *y);
+
+
+// cKDE.c
+void dKDE(double *x0, int *n0, double *xc, double *h, 
+	  double *f, int *n);
+void pKDE(double *x0, int *n0, double *xc, double *h, 
+	  double *f, int *n);
+
 //Fkernel.f
 void F77_SUB(linbin)(double *x, int *n, double *a, double *b,
 		     int *m, int *trun, double *gcounts);
@@ -41,6 +77,7 @@ void F77_SUB(remp)(int *n,double *y,double *f, double *a, double *b,
 		   int *ntotal);
 void F77_SUB(mlensimp)(double *w, double *f,double *a, double *b,
 		     int *n, double *theta);
+
 
 // ckernel.c
 void orexactl(int *counts, double *alpha, double *out);
@@ -180,6 +217,21 @@ static const R_FortranMethodDef FortEntries[] = {
   {"ofcpdf", (DL_FUNC) &F77_SUB(ofcpdf), 8},
   {"remp", (DL_FUNC) &F77_SUB(remp), 10},
   {"mlensimp", (DL_FUNC) &F77_SUB(mlensimp), 6},
+
+  {"pKDE", (DL_FUNC) & pKDE, 6},
+  {"dKDE", (DL_FUNC) & dKDE, 6},
+
+  {"wmise", (DL_FUNC) & wmise, 6},
+  {"awkde", (DL_FUNC) & awkde, 8},
+  {"wkde", (DL_FUNC) & wkde, 8},
+  {"wlinbin", (DL_FUNC) &F77_SUB(wlinbin),  8},
+  {"yldist", (DL_FUNC) &F77_SUB(yldist),  3},
+
+  {"wnpr", (DL_FUNC) & wnpr, 8},
+  {"wdekde", (DL_FUNC) & wdekde, 7},
+
+  {"DkNpReg", (DL_FUNC) & DkNpReg, 9},
+  {"NormLap2", (DL_FUNC) & NormLap2, 6},
 
   {NULL, NULL, 0}
 };

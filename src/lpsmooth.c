@@ -448,7 +448,7 @@ void lpsmooth(double *xgrid, int *ngrid, double *x, double *y,
 
   Fvdi f[1];
   f[0] = funGauss;
-  //compute kappa0
+  //compute k
   kappa[0] = GLIntvdi(range[0],range[1],f[0],x,hopt,size[0]); 
 }
 
