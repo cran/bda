@@ -16,7 +16,7 @@
 ## method 4) For heteroscedastic errors. Need to estimate based on an
 ## lpr object. Yu and Jones (2004).
 
-lps.variance <- function(y,x, gridsize, bw, method="Rice"){
+lps.variance <- function(y,x, bw, method="Rice"){
     method <- match.arg(tolower(method),
                         c("wasserman","rice","gasser",
                           "heteroscedastic"))
@@ -31,9 +31,12 @@ lps.variance <- function(y,x, gridsize, bw, method="Rice"){
 
     if(method == "wasserman"){
         ## we fit lpr
-        if(missing(bw)) stop("'bw' is missing")
-        ## we fit an lpr to get temporary results.  sd.y does not matter.
-        fhat <- lpsmooth(y=y,x=x,bw=bw,sd.y=sqrt(s2))
+        if(missing(bw)){
+            fhat <- lpsmooth(y=y,x=x,lscv=TRUE,sd.y=sqrt(s2))
+            bw <- fhat$pars$bw
+        }else{
+            fhat <- lpsmooth(y=y,x=x,bw=bw,sd.y=sqrt(s2))
+        }
         tmp <- .DesignMatrix(x,bw)
         nu1 <- sum(diag(tmp))
         dl2 <- apply(tmp^2,2,sum)
@@ -51,28 +54,23 @@ lps.variance <- function(y,x, gridsize, bw, method="Rice"){
         di <- ai * oy[1:(n-2)] + bi * oy[3:n] - oy[2:(n-1)]
         res <- mean(ci2*di^2)
     }else{
-        if(missing(bw)) stop("'bw' is missing")
         ## we fit an lpr to get temporary results.  sd.y does not matter.
-        
-        from <- min(x)
-        to <- max(x)
-        if(missing(gridsize)) gridsize <- 512L
-        stopifnot(gridsize > 10)
-        gpoints <- seq(from, to, length=gridsize)
+        fhat <- lpsmooth(y=y,x=x,lscv=TRUE,sd.y=sqrt(s2))
+        bw1 <- fhat$pars$bw
+        from <- min(x); to <- max(x)
         fhat <- .Fortran(.F_lpsmooth,
                          fx = as.double(x), as.integer(n),
                          as.double(x),y0=as.double(y), as.integer(n),
-                         bw = as.double(bw), as.integer(0),
+                         bw = as.double(bw1), as.integer(0),
                          as.double(c(from, to)), as.integer(0),
                          ellx = double(n), kappa=double(1))
-        z <- 2.0 * log(abs(y - fhat$y0))
-        qhat <- .Fortran(.F_lpsmooth,
-                         fx = as.double(gpoints), as.integer(gridsize),
-                         as.double(x), as.double(z), as.integer(n),
-                         bw = as.double(bw), as.integer(0),
-                         as.double(c(from, to)), as.integer(0),
-                         ellx = double(gridsize), kappa=double(1))
-        res <- exp(qhat$fx)
+        z <- log((y - fhat$y0)^2)
+        if(missing(bw)){
+            qhat <- lpsmooth(y=z,x=x,lscv=TRUE)
+        }else{
+            qhat <- lpsmooth(y=z,x=x,bw=bw,lscv=FALSE)
+        }
+        res <- list(x=qhat$x, y=exp(qhat$y),bw=qhat$pars$bw)
     }
     res
 }
@@ -103,71 +101,15 @@ lps.variance <- function(y,x, gridsize, bw, method="Rice"){
 ## could be extremeely slow when the sample size is very large.
 
 lpsmooth <-
-    function(y,x,bw,sd.y,sd.x,lscv=FALSE,adaptive=FALSE,
+    function(y,x,bw,sd.y,lscv=FALSE,adaptive=FALSE,
              from,to,gridsize,conf.level=0.95)
 {
-    if(missing(sd.x)){
-        out <- .lps(y=y,x=x,bw=bw,sd.y=sd.y,sd.x=0,
-                    lscv=lscv,adaptive=adaptive,
-                    from=from,to=to,gridsize=gridsize,
-                    conf.level=conf.level)
-    }else{
-        out <- .lpseiv(y=y,x=x,bw=bw,sd.x=sd.x,lscv=lscv,
-                       adaptive=adaptive,
-                       from=from,to=to,gridsize=gridsize)
-    }
-    out
+    out <- .lps(y=y,x=x,bw=bw,sd.y=sd.y,sd.x=0,
+                lscv=lscv,adaptive=adaptive,
+                from=from,to=to,gridsize=gridsize,
+                conf.level=conf.level)
 }
 
-.lpseiv <- function(y,x,bw,sd.x,lscv,adaptive,
-                    from=from,to=to,gridsize=gridsize)
-{
-    nx <- length(x)
-    if(length(y) != nx)
-        stop("'x' and 'y' have different lengths")
-    if(length(sd.x)>1){
-        if(length(sd.x) != nx)
-            stop("'x' and 'sd.x' have different lengths")
-        if(any(sd.x < 0))
-            stop("invalid 'sd.x' value(s)")
-    }else{
-        sd.x <- rep(sd.x,nx)
-    }
-    
-    sele <- is.na(y)|is.na(x)
-    y <- y[!sele];
-    x <- x[!sele]
-    sd.x <- sd.x[!sele]
-    nx <- length(x)
-
-    optimal <- ifelse(adaptive, 1,-1) #<=0 no automatic bandwidth selection
-    loo <- ifelse(lscv, 1,-1) #<=0 no automatic bandwidth selection
-    if(missing(bw)){
-        bw <- .bwdmise(x, sd.x)
-    }else if(bw <= 0){
-        stop("invalid 'bw'.")
-    }
-
-    if(missing(from)) from <- min(x)
-    if(missing(to)) to <- max(x)
-    stopifnot(to > from)
-    if(missing(gridsize)) gridsize <- 512L
-    stopifnot(gridsize > 10)
-    gpoints <- seq(from, to, length=gridsize)
-
-    out <- .Fortran(.F_DkNpReg,
-                    as.double(x),
-                    as.double(y),
-                    as.double(sd.x),
-                    as.integer(nx),
-                    h = as.double(bw),
-                    y = as.double(gpoints),
-                    as.integer(gridsize),
-                    as.double(loo),
-                    gcv = as.double(optimal))
-    
-    list(y = out$y, x = gpoints, bw=out$h, gcv=out$gcv)
-}
 
 .lps <- function(y,x,bw,sd.y,sd.x,lscv=FALSE, adaptive=FALSE,
                  from,to,gridsize,conf.level=0.95)
@@ -188,7 +130,7 @@ lpsmooth <-
         if(n < size.limit){
             lscv <- 1
             bw <- bw.nrd(x)
-            adaptive = 1  # use adaptive bandwidth selector
+            ##adaptive = 1  # use adaptive bandwidth selector
             lscv <- 0
         }else{
             stop("'bw' is missing.")
@@ -209,7 +151,7 @@ lpsmooth <-
     
     ##  Compute the variance based on the raw data
     if(missing(sd.y)){
-        sd.y <- lps.variance(y=y,x=x,bw=bw)
+        sd.y <- sqrt(lps.variance(y=y,x=x,bw=bw))
     }else{
         stopifnot(is.numeric(sd.y))
         stopifnot(!any(sd.y < 0))
@@ -248,6 +190,19 @@ lpsmooth <-
                     kappa=double(1))
     y0 <- out$y
     y1 <- out$fx
+    
+    if(is.null(y1)){
+        if(adaptive==0)
+            cat("bw=",bw,"\n")
+        stop("fail to converge")
+    }
+    if(length(y1)!=gridsize){
+        if(adaptive==0)
+            cat("bw=",bw,"\n")
+        stop("fail to converge")
+    }
+
+    
     ellx <- out$ellx
     kappa <- out$kappa
     
@@ -256,7 +211,7 @@ lpsmooth <-
                     as.double(conf.level))$cv
 
     bw <- out$bw
-    pars <- list(cv=cv, kappa=kappa, bw=bw)
+    pars <- list(cv=cv, kappa=kappa, bw=bw,sigma=sd.y)
 
     y <- y1
     sele1 = is.na(y) | !is.finite(y)

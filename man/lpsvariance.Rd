@@ -11,18 +11,13 @@
 }
 
 \usage{
-  lps.variance(y,x,gridsize, bw, method="Rice")
+  lps.variance(y,x,bw, method="Rice")
 }
 \arguments{
   \item{y,x}{Two numerical vectors: \code{y} is the response and
   \code{x} is the predictor.}
   \item{bw}{Smoothing parameter.  Is used only when \code{method='Wasserman'}
   or \code{method='heteroscedastic'}.}
-
-  \item{gridsize}{The size of a vector of grid points where the variance
-  of \code{r(x)} is to
-  be estimated. This parameter is needed only when
-  \code{method='heteroscedastic'}.}
   
   \item{method}{
    We use four method to compute the variance of r(x):

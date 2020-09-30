@@ -202,7 +202,7 @@ VAS.pdf <- function(x,y,bw,s.x, gridsize = 401L,type="absolute",
     d <- diff(xhist$breaks)
     x0 <- xhist$breaks[-1] - d/2
     x1 <- (x0 - a)/(b-a)
-    out <- lpsmooth(y=y0, x=x1, sd.x=0,lscv=FALSE,bw=bw)
+    out <- lpsmooth(y=y0, x=x1, lscv=FALSE,bw=bw)
     fhat <- (out$y)^2
     x0 <- out$x
     d <- diff(x0)

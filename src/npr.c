@@ -10,9 +10,20 @@ typedef double (*Fun2p)(double,double);
 typedef double (*Fun3p)(double,double,double);
 typedef double (*Fun3d)(double,double,double*);
 typedef double (*Fun4p)(double,double*,double,int);
-typedef double (*Fun5p)(double,double,double,double*,int);
+typedef double (*Fun5p)(double,double,double,double*,int,int);
 typedef double (*Fun6p)(double,double,double,double*,double*,int);
 
+/////////// Defining Kernels ////////////
+
+double KernHLap(double t,double z,double sig){
+  double res=0.0;
+  if(fabs(z) < 1.0){
+    res = cos(-t * z) * exp(-0.5*t*t) * sig;
+  }
+  return res;
+}
+
+//////////////////////////////////////////////////////////////////////////
 
 void BootSample(double x[], double y[], int n)
 /* 
@@ -213,8 +224,6 @@ double GLInt6p(double a, double b,
 
    return c * integral;
 }
-
-
 
 //////////////////////////////////////////////////////////////////////////
 void DKEGauss(double *y,int *ny,double *x, int *nx, 
@@ -1472,3 +1481,608 @@ void pdfLaplace(double *x0, double *Sn, int *nx0,
   }
 }
 
+/* Non-parametric regression (Nadaraya-Watson type estimator) with
+heteroscedastic Laplacian measurement errors.
+
+To reduce computational burdens, we compute the commonly used
+variables first, then compute the integrals based on these
+intermediate results. Only the Real part of the Eular formula is
+computed in the kernel function. */
+
+
+void nprHLapSAVE(double *x0,  int *nx0, 
+	     double *x, double *y, double *sig, int *size,
+	     double *bw, double *gcv)
+{
+  Fun3p f[1];
+  f[0] = KernHLap;
+  int i,j,m,n;
+  n = size[0];
+  m = nx0[0];
+  double mx[m],fx[m],z,h;
+  double tmp;
+  
+  h = bw[0];
+
+  for(i=0;i<m;i++){
+    mx[i] = 0.0; //
+    fx[i] = 0.0; //
+  }
+  
+  /* nt[] and pt[] will be used as gloabl variable within this
+     function. */
+  int k, K=NOPZ100;  //K is changable (Integral & here)
+  double nt, pt, dum, psum, nsum;
+  double nsig[K][n], psig[K][n];
+  double nsig2[K], psig2[K]; //to be pass co compute integrals  
+  const double *pB = &B100[K - 1];  //K is changable 
+  const double *pA = &A100[K - 1];  //K is changable
+
+  k=K-1;
+  for (; pB >= B100; pA--, pB--,k--) {
+    dum = 0.5 * *pB;
+
+    nt = 0.5 - dum; 
+    pt = 0.5 + dum;
+
+    nsum = 0.0;psum=0.0;//sum of exp part;
+    for(j=0;j<n;j++){
+      //if(fabs(nt) < 1.414*h/sig[i]){
+      //CF of h.lap(0,sig_j) -> t=t/h
+      nsig[k][j] = 1.0/(1.0 + 0.5 * pow(sig[i]*nt/h,2.0));
+      //}else{
+      //nsig[k][j] = 0.0;
+      //}
+      //if(fabs(pt) < 1.414*h/sig[i]){
+      psig[k][j] = 1.0/(1.0 + 0.5 * pow(sig[i]*pt/h,2.0));
+      //}else{
+      //psig[k][j] = 0.0;
+      //}
+      nsum += pow(nsig[k][j],2.0);//sum squares of varphi[Uj(t/h)]
+      psum += pow(psig[k][j],2.0);
+    }
+    for(j=0;j<n;j++){
+      nsig[k][j] = n * nsig[k][j]/nsum;// 1/psi[Uj(t/h)]
+      psig[k][j] = n * psig[k][j]/psum;
+    }
+  }
+
+  for(i=0;i<m;i++){
+    for(j=0;j<n;j++){
+      z = (x0[i]-x[j])/h;
+      for(k=0; k<K; k++){
+	psig2[k] = psig[k][j];
+	nsig2[k] = nsig[k][j];
+      }
+      tmp = GLInt3d(-10.,10.,f[0],z, psig2, nsig2); //deconvolution kernel Lj
+      if(tmp > 0.0){
+	fx[i] += tmp;
+	mx[i] += tmp * y[i];
+      }
+    }
+  }
+
+  // reuse 'x0' to export the results of mH(x)
+  for(i=0;i<m;i++){
+    if(fx[i] <= 0.0){
+      x0[i] = 0.0;
+    }else{
+      x0[i] = mx[i] / fx[i]; // return mH(x)
+    }
+    //printf("ID=%d, m(x)=%f10.2\n",i, x0[i]);
+  }
+}
+
+double subhlap(double t,double z,double h,double *sig,
+		int j,int n){
+  double res=0.0,psi=0.0,sum,th,tmp;
+  int i;
+
+  th = t/h;
+  psi = 1.0/(1.0 + 0.5 * pow(sig[j] * th, 2.0)); //symmetric: -t vs t
+
+  sum = 0.0;
+  for(i=0;i<n;i++){
+    tmp = 1.0/(1.0 +  0.5 * pow(sig[i] * th,2.0));
+    sum += pow(tmp, 2.0);
+  }
+  psi = sum /(n*psi);
+
+  res = cos(-t * z) * exp(-0.5*t*t) / psi;
+  return res;
+}
+
+double GLInt5p(double a, double b, 
+	       double (*f)(double, double,double,double*,int,int),
+	       double z, double h, double *sig, int j,int n)
+{
+   double integral = 0.0; 
+   double c = 0.5 * (b - a);
+   double d = 0.5 * (b + a);
+   double dum;
+   const double *pB = &B100[NOPZ100 - 1];
+   const double *pA = &A100[NOPZ100 - 1];
+
+   for (; pB >= B100; pA--, pB--) {
+      dum = c * *pB;
+      integral += *pA * ( (*f)(d - dum,z,h,sig,j,n) + (*f)(d + dum,z,h,sig,j,n) );
+   }
+
+   return c * integral;
+}
+
+void nprHLap(double *x0,  int *nx0, 
+	     double *x, double *y, double *sig, int *size,
+	     double *bw, double *gcv)
+{
+  Fun5p f[1];
+  f[0] = subhlap;
+
+  int i,j,m,n;
+  n = size[0];
+  m = nx0[0];
+  double mx,fx,z,h,Lj;
+  h = bw[0]; 
+
+  for(i=0;i<m;i++){
+    fx = 0.0;
+    mx = 0.0;
+    for(j=0;j<n;j++){
+      z = (x0[i] - x[j])/h;
+      Lj = GLInt5p(z-10.,z+10.,f[0],z,h,sig,j,n); //deconvolution kernel Lj      
+      //if(Lj > 0.0){
+      fx += Lj;
+      mx += y[j] * Lj;
+      //}
+    }
+    x0[i] = mx/fx;
+  }  
+
+  gcv[0] = 0.0;
+  for(i=0;i<n;i++){
+    fx = 0.0;
+    mx = 0.0;
+    for(j=0;j<n;j++){
+      if(i!=j){
+	z = (x0[i] - x[j])/h;
+	Lj = GLInt5p(z-10.,z+10.,f[0],z,h,sig,j,n); //deconvolution kernel Lj
+	//if(Lj > 0.0){
+	fx += Lj;
+	mx += y[j] * Lj;
+	//}
+      }
+    }
+    gcv[0] += pow(mx/fx-y[i],2.0);
+  } 
+  gcv[0] /= (double)n;
+}
+
+double nwreg(double x, double Z[], double Y[],int n, double h){
+  int i;
+  double usum=0.,dsum=0.,tmp=0.0;
+  for(i=0;i<n;i++){
+    tmp = exp(-0.5*pow((x-Z[i])/h, 2.0));
+    usum += Y[i] * tmp;
+    dsum += tmp;
+  }
+  return(usum/dsum);
+}
+
+double nwreg2(int j, double Z[], double Y[],int n, double h){
+  int i;
+  double usum=0.,dsum=0.,tmp=0.0,x=Z[j];
+  for(i=0;i<n;i++){
+    if(i != j){
+      tmp = exp(-0.5*pow((x-Z[i])/h, 2.0));
+      usum += Y[i] * tmp;
+      dsum += tmp;
+    }
+  }
+  return(usum/dsum);
+}
+
+void NWReg(double *Z,double *Y,int *size, 
+	   double *bandwidth, double *X, int *nx, 
+	   double *loo, int *optim, double *opt){
+  int i,j,n=size[0];
+  double hopt=bandwidth[0];
+
+  // choose optimal bandwidth using the risk as the leave-one-out
+  // cross-validation score:
+  double h,hstep,rh,t,Rh=1.0e9;
+  if(optim[0] > 0){
+    h = bandwidth[0]*0.8;
+    hstep = 0.0035*bandwidth[0];
+    for(j=0;j<400;j++){
+      rh = 0.0;
+      for(i=0;i<size[0];i++){
+	if(loo[0] > 0.0){
+	  t = nwreg2(i,Z,Y,n,h);
+	}else{
+	  t = nwreg(Z[i],Z,Y,n,h);
+	}
+	rh += pow(t-Y[i],2.0);
+      }
+      rh = rh / size[0];
+      if(rh < Rh){
+	Rh = rh;
+	hopt = h;
+      }
+      h += hstep;
+    }  
+    bandwidth[0] = hopt;
+    opt[0] = Rh;
+  }else{
+    rh = 0.0;
+    for(i=0;i<size[0];i++){
+      if(loo[0] > 0.0){
+	t = nwreg2(i,Z,Y,n,hopt);
+      }else{
+	t = nwreg(Z[i],Z,Y,n,hopt);
+      }
+      rh += pow(t-Y[i],2.0);
+    }
+    rh = rh / size[0];
+    opt[0] = rh;
+  }
+  
+  for(i=0;i<nx[0];i++){
+    X[i] = nwreg(X[i],Z,Y,n,hopt);
+  }
+}
+
+void lprHLap(double *x0,  int *nx0, 
+	     double *x, double *y, double *sig, int *size,
+	     double *bw, double *gcv)
+{
+  Fun5p f[1];
+  f[0] = subhlap;
+
+  int i,j,m,n;
+  n = size[0];
+  m = nx0[0];
+  double mx,fx,z,h,Lj;
+  h = bw[0]; 
+
+  double bi[n],d,S1,S2;
+
+  for(i=0;i<m;i++){
+    S1 = 0.0;
+    S2 = 0.0;
+    for(j=0;j<n;j++){
+      d = x[j] - x0[i]; 
+      z = -d/h;
+      Lj = GLInt5p(z-10.,z+10.,f[0],z,h,sig,j,n); //deconvolution kernel Lj      
+      S1 += Lj*d;
+      S2 += Lj * d * d;
+      bi[j] = Lj;
+    }
+    fx = 0.0;
+    for(j=0;j<n;j++){
+      d = x[j] - x0[i]; 
+      bi[j] = bi[j] * (S2-S1*d);
+      fx += bi[j];
+    }
+    mx = 0.0;
+    for(j=0;j<n;j++){
+      bi[j] /= fx;
+      mx += bi[j]*y[j];
+    }
+    x0[i] = mx;
+  }  
+
+  gcv[0] = 0.0;
+  for(i=0;i<n;i++){
+    S1 = 0.0;
+    S2 = 0.0;
+    for(j=0;j<n;j++){
+      if(i!=j){
+	d = x[j] - x[i]; 
+	z = -d/h;
+	Lj = GLInt5p(z-10.,z+10.,f[0],z,h,sig,j,n); //deconvolution kernel Lj
+	S1 += Lj*d;
+	S2 += Lj * d * d;
+	bi[j] = Lj;
+      }
+    }
+    fx = 0.0;
+    for(j=0;j<n;j++){
+      if(i!=j){
+	d = x[j] - x[i]; 
+	bi[j] = bi[j] * (S2-S1*d);
+	fx += bi[j];
+      }
+    }
+    mx = 0.0;
+    for(j=0;j<n;j++){
+      if(i!=j){
+	bi[j] /= fx;
+	mx += bi[j]*y[j];
+      }
+    }
+    gcv[0] += pow(mx-y[i],2.0);
+  } 
+  gcv[0] /= (double)n;
+}
+
+
+void lprLap(double *x0,  int *nx0, 
+	     double *x, double *y, double *sig, int *size,
+	     double *bw, double *gcv)
+{
+  Fun5p f[1];
+  f[0] = subhlap;
+
+  int i,j,m,n;
+  n = size[0];
+  m = nx0[0];
+  double mx,fx,z,h,Lj;
+  h = bw[0]; 
+
+  double bi[n],d,S1,S2;
+
+  for(i=0;i<m;i++){
+    S1 = 0.0;
+    S2 = 0.0;
+    for(j=0;j<n;j++){
+      d = x[j] - x0[i]; 
+      z = -d/h;
+      if(sig[0]==0.0){
+	Lj = dnorm(z,0.0,1.0,0);
+      }else{
+	Lj = KernGL(z,sig[0]);
+      }
+      S1 += Lj*d;
+      S2 += Lj * d * d;
+      bi[j] = Lj;
+    }
+    fx = 0.0;
+    for(j=0;j<n;j++){
+      d = x[j] - x0[i]; 
+      bi[j] = bi[j] * (S2-S1*d);
+      fx += bi[j];
+    }
+    mx = 0.0;
+    for(j=0;j<n;j++){
+      bi[j] /= fx;
+      mx += bi[j]*y[j];
+    }
+    x0[i] = mx;
+  }  
+
+  gcv[0] = 0.0;
+  for(i=0;i<n;i++){
+    S1 = 0.0;
+    S2 = 0.0;
+    for(j=0;j<n;j++){
+      if(i!=j){
+	d = x[j] - x[i]; 
+	z = -d/h;
+	if(sig[0]==0.0){
+	  Lj = dnorm(z,0.0,1.0,0);
+	    }else{
+	  Lj = KernGL(z,sig[0]);
+	}
+	S1 += Lj*d;
+	S2 += Lj * d * d;
+	bi[j] = Lj;
+      }
+    }
+    fx = 0.0;
+    for(j=0;j<n;j++){
+      if(i!=j){
+	d = x[j] - x[i]; 
+	bi[j] = bi[j] * (S2-S1*d);
+	fx += bi[j];
+      }
+    }
+    mx = 0.0;
+    for(j=0;j<n;j++){
+      if(i!=j){
+	bi[j] /= fx;
+	mx += bi[j]*y[j];
+      }
+    }
+    gcv[0] += pow(mx-y[i],2.0);
+  } 
+  gcv[0] /= (double)n;
+}
+
+double hwlprNorm(double x[], double y[], double w[],
+		 int n, double h0){
+  int i,j,k;
+  double mx,fx,z,h,hstep,Lj,hopt=h0;
+  double bi[n],d,S1,S2,gmin=9.e+10,gcv;
+  //search over [h/2,2h] with ngrid=30
+  hstep = 0.25*h0; //(10.3-0.3)*h/500
+  h = 0.3*h0;
+  for(k=0;k<500;k++){
+    h += hstep; 
+    gcv = 0.0;
+    for(i=0;i<n;i++){
+      S1 = 0.0;
+      S2 = 0.0;
+      for(j=0;j<n;j++){
+	if(i!=j){
+	  d = x[j] - x[i]; 
+	  z = -d/h;
+	  Lj = dnorm(z,0.0,1.0,0);
+	  S1 += Lj*d;
+	  S2 += Lj * d * d;
+	  bi[j] = Lj;
+	}
+      }
+      fx = 0.0;
+      for(j=0;j<n;j++){
+	if(i!=j){
+	  d = x[j] - x[i]; 
+	  bi[j] = bi[j] * (S2-S1*d);
+	  fx += bi[j]*w[j];
+	}
+      }
+      mx = 0.0;
+      for(j=0;j<n;j++){
+	if(i!=j){
+	  bi[j] /= fx;
+	  mx += bi[j]*y[j]*w[j];
+	}
+      }
+      gcv += pow(mx-y[i],2.0);
+    } 
+    if(gcv < gmin){
+      gmin = gcv;
+      hopt = h;
+    }
+    //printf("LSCV = %f10.2, bw = %f10.2, hopt=%f10.2\n", gcv , h, hopt);
+  }
+  return(hopt);
+}
+
+
+void wlprNorm(double *x0,  int *nx0, 
+	      double *x, double *y, double *w, int *size,
+	      double *bw, int *opt)
+{
+  int i,j,m,n;
+  n = size[0];
+  m = nx0[0];
+  double mx,fx,z,h,Lj;
+  h = bw[0]; 
+  
+  if(opt[0]>0){//find optimal bandwidth
+    h = hwlprNorm(x,y,w,n,h);
+    bw[0] = h; //save bw
+  }
+
+  double bi[n],d,S1,S2;
+
+  for(i=0;i<m;i++){
+    S1 = 0.0;
+    S2 = 0.0;
+    for(j=0;j<n;j++){
+      d = x[j] - x0[i]; 
+      z = -d/h;
+      Lj = dnorm(z,0.0,1.0,0);
+      S1 += Lj*d;
+      S2 += Lj * d * d;
+      bi[j] = Lj;
+    }
+    fx = 0.0;
+    for(j=0;j<n;j++){
+      d = x[j] - x0[i]; 
+      bi[j] = bi[j] * (S2-S1*d);
+      fx += bi[j]*w[j];
+    }
+    mx = 0.0;
+    for(j=0;j<n;j++){
+      bi[j] /= fx;
+      mx += bi[j]*y[j]*w[j];
+    }
+    x0[i] = mx;
+  }  
+}
+
+double ahwlprNorm(double x[], double y[], double w[],
+		  int n, double bw[], double h0){
+  int i,j,k;
+  double mx,fx,z,h,hstep,Lj,hopt=h0;
+  double bi[n],d,S1,S2,gmin=9.e+10,gcv;
+  //search over [h/2,2h] with ngrid=30
+  hstep = 0.35*h0; //(10.3-0.3)*h/500
+  h = 0.3*h0;
+  for(k=0;k<500;k++){
+    h += hstep; 
+    gcv = 0.0;
+    for(i=0;i<n;i++){
+      S1 = 0.0;
+      S2 = 0.0;
+      for(j=0;j<n;j++){
+	if(i!=j){
+	  d = x[j] - x[i]; 
+	  z = -d/h/bw[j];
+	  Lj = dnorm(z,0.0,1.0,0);
+	  S1 += Lj*d;
+	  S2 += Lj * d * d;
+	  bi[j] = Lj;
+	}
+      }
+      fx = 0.0;
+      for(j=0;j<n;j++){
+	if(i!=j){
+	  d = x[j] - x[i]; 
+	  bi[j] = bi[j] * (S2-S1*d);
+	  fx += bi[j]*w[j];
+	}
+      }
+      mx = 0.0;
+      for(j=0;j<n;j++){
+	if(i!=j){
+	  bi[j] /= fx;
+	  mx += bi[j]*y[j]*w[j];
+	}
+      }
+      gcv += pow(mx-y[i],2.0);
+    } 
+    if(gcv < gmin){
+      gmin = gcv;
+      hopt = h;
+    }
+    //printf("LSCV = %f10.2, bw = %f10.2, hopt=%f10.2\n", gcv , h, hopt);
+  }
+  return(hopt);
+}
+
+void awlprNorm(double *x0,  int *nx0, 
+	      double *x, double *y, double *w, int *size,
+	      double *bandwidth)
+{
+  int i,j,m,n;
+  n = size[0];
+  m = nx0[0];
+  double d,mx,fx,z,h,Lj,bw[n];
+  h = bandwidth[0];
+
+  for(i=0;i<n;i++){
+    fx = 0.0;
+    bw[i] = 0.0;
+    for(j=0;j<n;j++){
+      d = (x[i] - x[j])/h; 
+      bw[i] += dnorm(d,0.0,1.0,0);
+    }
+    bw[i] = 1.0/bw[i];
+    fx += bw[i];
+  }
+
+  for(i=0;i<n;i++){
+    bw[i] *= h/fx; 
+  }
+  
+  h = ahwlprNorm(x,y,w,n,bw,h);
+
+  double bi[n],S1,S2;
+
+  for(i=0;i<m;i++){
+    S1 = 0.0;
+    S2 = 0.0;
+    for(j=0;j<n;j++){
+      d = x[j] - x0[i]; 
+      z = -d/h/bw[j];
+      Lj = dnorm(z,0.0,1.0,0);
+      S1 += Lj*d;
+      S2 += Lj * d * d;
+      bi[j] = Lj;
+    }
+    fx = 0.0;
+    for(j=0;j<n;j++){
+      d = x[j] - x0[i]; 
+      bi[j] = bi[j] * (S2-S1*d);
+      fx += bi[j]*w[j];
+    }
+    mx = 0.0;
+    for(j=0;j<n;j++){
+      bi[j] /= fx;
+      mx += bi[j]*y[j]*w[j];
+    }
+    x0[i] = mx;
+  }  
+}

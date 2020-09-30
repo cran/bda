@@ -10,9 +10,29 @@
 #include <R_ext/Rdynload.h>
 
 // npr.c
+void awlprNorm(double *X0, int *n0,
+	     double *X, double *Y, double *W, int *size, 
+	     double *bw);
+void wlprNorm(double *X0, int *n0,
+	     double *X, double *Y, double *W, int *size, 
+	     double *bw, int *opt);
+void lprLap(double *X0, int *n0,
+	     double *X, double *Y, double *S, int *size, 
+	     double *bw, double *gcv);
+void lprHLap(double *X0, int *n0,
+	     double *X, double *Y, double *S, int *size, 
+	     double *bw, double *gcv);
+void nprHLap(double *X0, int *n0,
+	     double *X, double *Y, double *S, int *size, 
+	     double *bw, double *gcv);
+
 void DkNpReg(double *Z, double *Y, double *S, int *size, 
 	     double *bw, double *X, int *nx, 
 	     double *loo,double *opt);
+
+void NWReg(double *Z, double *Y, int *size, 
+	   double *bw, double *X, int *nx, 
+	   double *loo,int *optim, double *opt);
 
 void NormLap2(int *n, double *Rfx,double *ss, double *h1,
 	      double *grid,double *ub);
@@ -231,7 +251,13 @@ static const R_FortranMethodDef FortEntries[] = {
   {"wdekde", (DL_FUNC) & wdekde, 7},
 
   {"DkNpReg", (DL_FUNC) & DkNpReg, 9},
+  {"NWReg", (DL_FUNC) & NWReg, 9},
   {"NormLap2", (DL_FUNC) & NormLap2, 6},
+  {"nprHLap", (DL_FUNC) & nprHLap, 8},
+  {"lprHLap", (DL_FUNC) & lprHLap, 8},
+  {"lprLap", (DL_FUNC) & lprLap, 8},
+  {"wlprNorm", (DL_FUNC) & wlprNorm, 8},
+  {"awlprNorm", (DL_FUNC) & awlprNorm, 7},
 
   {NULL, NULL, 0}
 };
