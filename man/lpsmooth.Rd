@@ -20,7 +20,7 @@
  npr(y,x,sd.x,bw,kernel='decon',optimal=FALSE,adaptive=FALSE,
      x0,from, to, gridsize,conf.level=0.95)
  wlpsmooth(y,x,w,s.x,bw,from,to,gridsize,conf.level=0.95)
- bootsmooth(y,x, iter=100,conf.level=0.95)
+ bootsmooth(y,x,type="relative",iter=100,conf.level=0.95)
 }
 \arguments{
   \item{y,x}{Two numerical vectors.}
@@ -48,6 +48,8 @@
   \item{sd.x}{Standard deviation of the measurement error \code{x}.}
   \item{conf.level}{Confidence level.}
   \item{iter}{Bootstrapping iteration number.}
+  \item{type}{"relative" changes or "absolute" changes for effectiveness
+  evaluation.}
 }
 
 \value{

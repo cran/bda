@@ -336,38 +336,50 @@ npr <-
     list(y = mx, x = gpoints, bw=hopt, gcv=gcv,kernel=kernel)
 }
 
-bootsmooth <- function(y,x, iter=100,conf.level=0.95){
-  stopifnot(conf.level>0 ||conf.level<1)
-  alpha <- (1-conf.level)/2
-  y <- as.matrix(y)
-  x <- as.matrix(x)
-  
-  ry <- nrow(y); cy <- ncol(y)
-  rx <- nrow(x); cx <- ncol(x)
-  stopifnot(rx==ry)
-  ## two-stage bootstrapping
-  ##require(bda)
-  xbar <- apply(x,1,mean,na.rm=TRUE)
-  ybar <- apply(y,1,mean,na.rm=TRUE)
-  ybar <- 1-ybar/xbar
-  tmp <- npr(y=ybar,x=xbar,sd.x=0,kernel='lp')
-  x0 <- tmp$x
-  y0 <- tmp$y
-  ly <- NULL
-  for(i in 1:iter){
-      selexr <- sample(1:rx,replace=TRUE)
-      seleyr <- sample(1:ry,replace=TRUE)
-      selexc <- sample(1:cx,size=rx,replace=TRUE)
-      seleyc <- sample(1:cy,size=ry,replace=TRUE)
-      y1 <- y[cbind(seleyr,seleyc)]
-      x1 <- x[cbind(selexr,selexc)]
-      y1 <- 1-y1/x1
-      tmp <- npr(y=y1,x=x1,sd.x=0,kernel='lp',x0=x0)
-      ly <- cbind(ly,tmp$y)
-  }
-  qy <- apply(ly,1,quantile,prob=c(alpha,.50,1-alpha))
-  list(x=x0,y=y0,
-       ym=as.numeric(qy[2,]),
-       ll=as.numeric(qy[1,]),
-       ul=as.numeric(qy[3,]))
+bootsmooth <- function(y,x,type="relative", iter=100,conf.level=0.95){
+    type <- match.arg(tolower(type),
+                      c("absolute","relative","percent","mean",
+                        "average"))
+    stopifnot(conf.level>0 ||conf.level<1)
+    alpha <- (1-conf.level)/2
+    y <- as.matrix(y)
+    x <- as.matrix(x)
+    
+    ry <- nrow(y); cy <- ncol(y)
+    rx <- nrow(x); cx <- ncol(x)
+    stopifnot(rx==ry)
+    ## two-stage bootstrapping
+    ##require(bda)
+    xbar <- apply(x,1,mean,na.rm=TRUE)
+    ybar <- apply(y,1,mean,na.rm=TRUE)
+    ybar <- 1-ybar/xbar
+    #sx <- apply(x,1,sd,na.rm=TRUE)
+    #s2bar <- mean(sx^2, na.rm=TRUE)
+    #sx[is.na(sx)] <- sqrt(s2bar)
+    tmp <- npr(y=ybar,x=xbar,sd.x=0,kernel='lp')
+    x0 <- tmp$x
+    y0 <- tmp$y
+    ly <- NULL
+    for(i in 1:iter){
+        selexr <- sample(1:rx,replace=TRUE)
+        seleyr <- sample(1:ry,replace=TRUE)
+        selexc <- sample(1:cx,size=rx,replace=TRUE)
+        seleyc <- sample(1:cy,size=ry,replace=TRUE)
+        y1 <- y[cbind(seleyr,seleyc)]
+        x1 <- x[cbind(selexr,selexc)]
+        if(type=="absolute"||
+           type=="mean"||
+           type=="average")
+            y1 <- x1-y1
+        else
+            y1 <- 1-y1/x1
+
+        tmp <- npr(y=y1,x=x1,sd.x=0,kernel='lp',x0=x0)
+        ly <- cbind(ly,tmp$y)
+    }
+    qy <- apply(ly,1,quantile,prob=c(alpha,.50,1-alpha))
+    list(x=x0,y=y0,
+         ym=as.numeric(qy[2,]),
+         ll=as.numeric(qy[1,]),
+         ul=as.numeric(qy[3,]))
 }

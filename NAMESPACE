@@ -25,7 +25,11 @@ importFrom("stats", "approx", "dlnorm", "dnorm", "plnorm", "pnorm",
            "rlnorm", "rnorm", "runif", "lm", "qnorm", "sd", "pchisq",
            "bw.nrd","density", "median", "quantile", "qt", "coef",
            "optim","optimize","pexp","uniroot","pweibull","dweibull",
-           "chisq.test","dexp","var","spline","fft", "optimise","bw.nrd0")
+           "chisq.test","dexp","var","spline","fft", "optimise",
+	   "bw.nrd0","fisher.test", "prop.test", "t.test",
+           "qbinom", "wilcox.test")
 
 importFrom("graphics", "lines", "abline", "plot", "points", "hist",
 	   "contour","plot.default", "segments")
+
+importFrom("boot", "boot", "boot.ci")
