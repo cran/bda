@@ -27,7 +27,7 @@ importFrom("stats", "approx", "dlnorm", "dnorm", "plnorm", "pnorm",
            "optim","optimize","pexp","uniroot","pweibull","dweibull",
            "chisq.test","dexp","var","spline","fft", "optimise",
 	   "bw.nrd0","fisher.test", "prop.test", "t.test",
-           "qbinom", "wilcox.test")
+           "qbinom", "wilcox.test","ftable","ks.test","mantelhaen.test")
 
 importFrom("graphics", "lines", "abline", "plot", "points", "hist",
 	   "contour","plot.default", "segments")
