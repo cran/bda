@@ -15,10 +15,10 @@
 fit.GBP <- function(x,breaks){
     pars <- NULL
 
-    if(class(x)=="histogram"){
+    if(inherits(x,"histogram")){
         freq <- x$counts
         breaks <- x$breaks
-    }else if(class(x)=="bdata"){
+    }else if(inherits(x,"bdata")){
         freq <- x$freq
         breaks <- x$breaks
     }else if(is.numeric(x)){

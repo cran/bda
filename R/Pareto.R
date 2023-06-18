@@ -11,10 +11,10 @@
 fit.Pareto <- function(x, xm, method='mle'){
     method <- match.arg(tolower(method),
                         c("mle","ls"))
-    if(class(x) == 'histogram')
+    if(inherits(x,'histogram'))
         x <- binning(x)
     
-    if(class(x) == 'bdata'){
+    if(inherits(x,'bdata')){
         x <- list(counts=x$freq, breaks=c(x$ll[1],x$ul))
         if(method=='mle'){
             if(missing(xm)){

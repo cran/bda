@@ -7,6 +7,7 @@
 \alias{binning.histogram}
 \alias{plot.bdata}
 \alias{print.bdata}
+\alias{.bdaConnect}
 
 \encoding{UTF-8}
 

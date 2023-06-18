@@ -84,7 +84,7 @@ fit.FSD <- function(x,breaks,dist){
         if(missing(dist)) dist <- "GLD2"
         else dist <- as.character(dist)
         
-        if(class(x)=='histogram'||class(x)=='bdata'){
+        if(inherits(x,'histogram')||inherits(x,'bdata')){
             x.fit <- .fit.FSD1(x,dist=dist)
         }else{
             if(missing(breaks)){
@@ -116,9 +116,9 @@ fit.FSD <- function(x,breaks,dist){
 }
 
 fit.Copula <- function(x,y,xy){
-    if(class(x) != "FSD")
+    if(!inherits(x,"FSD"))
         stop("'x' must be a fitted FSD")
-    if(class(y) != "FSD")
+    if(!inherits(y,"FSD"))
         stop("'y' must be a fitted FSD")
     if(any(is.na(xy)))
         stop("missing value(s) in 'x'")
@@ -389,11 +389,11 @@ print.FSD <- function(x,...){
                         "mep","ep", "mixed","exp",
                         "lnorm","lognormal","kde",
                         "bkde","spline"))
-    if(class(x)=="histogram"){
+    if(inherits(x,"histogram")){
         brks <- x$breaks
         cnts <- x$counts
         xh <- x
-    }else if(class(x)=="bdata"){
+    }else if(inherits(x,"bdata")){
         brks <- x$breaks
         cnts <- x$freq
         xh <- x$xhist

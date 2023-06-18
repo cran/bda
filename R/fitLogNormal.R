@@ -133,7 +133,7 @@ print.mixlognormal <- function(x,...){
     mu <- NA
     sig <- NA
     
-    if(class(x)=="histogram"){
+    if(inherits(x,"histogram")){
         ## initial estimate using LS method
         f <- x$counts
         x0 <- x$breaks
@@ -185,7 +185,7 @@ print.mixlognormal <- function(x,...){
             mu <- res$mu
             sig <- res$s
         }
-    }else if(class(x)=="numeric"){        
+    }else if(inherits(x,"numeric")){        
         if(any(is.na(x))){
             x <- x[!is.na(x)]
             warning("missing value(s) removed")
@@ -272,7 +272,7 @@ print.mixlognormal <- function(x,...){
     ps <- NA
     ncomp <- round(k)
     
-    if(class(x)=="numeric"){
+    if(inherits(x,"numeric")){
         if(any(is.na(x))){
             x <- x[!is.na(x)]
             warning("missing value(s) removed")
@@ -349,7 +349,7 @@ print.mixlognormal <- function(x,...){
     ps <- NA
     ncomp <- round(k)
     
-    if(class(x)=="numeric"){
+    if(inherits(x,"numeric")){
         if(any(is.na(x))){
             x <- x[!is.na(x)]
             warning("missing value(s) removed")
@@ -377,7 +377,7 @@ print.mixlognormal <- function(x,...){
             mi <- log(mi[-k])
             qi <- qnorm(Fn[-k])
         }
-    }else if(class(x)=="histogram"){
+    }else if(inherits(x,"histogram")){
         xc <- x$counts
         y0 <- xc
         x0 <- x$breaks[-1]

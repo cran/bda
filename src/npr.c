@@ -69,66 +69,23 @@ void rdexp(double *x,int *n, double *sig)
 //    void   Gauss_Legendre_Coefs_2pts( double wght[] )                   
 //////////////////////////////////////////////////////////////////////////
 
-//  100pts
-
-static const double B100[] = {
-    1.56289844215430828714e-02,    4.68716824215916316162e-02,
-    7.80685828134366366918e-02,    1.09189203580061115002e-01,
-    1.40203137236113973212e-01,    1.71080080538603274883e-01,
-    2.01789864095735997236e-01,    2.32302481844973969643e-01,
-    2.62588120371503479163e-01,    2.92617188038471964730e-01,
-    3.22360343900529151720e-01,    3.51788526372421720979e-01,
-    3.80872981624629956772e-01,    4.09585291678301542532e-01,
-    4.37897402172031513100e-01,    4.65781649773358042251e-01,
-    4.93210789208190933576e-01,    5.20158019881763056670e-01,
-    5.46597012065094167460e-01,    5.72501932621381191292e-01,
-    5.97847470247178721259e-01,    6.22608860203707771585e-01,
-    6.46761908514129279840e-01,    6.70283015603141015784e-01,
-    6.93149199355801965946e-01,    7.15338117573056446485e-01,
-    7.36828089802020705530e-01,    7.57598118519707176062e-01,
-    7.77627909649495475605e-01,    7.96897892390314476375e-01,
-    8.15389238339176254384e-01,    8.33083879888400823522e-01,
-    8.49964527879591284320e-01,    8.66014688497164623416e-01,
-    8.81218679385018415547e-01,    8.95561644970726986709e-01,
-    9.09029570982529690453e-01,    9.21609298145333952679e-01,
-    9.33288535043079545942e-01,    9.44055870136255977955e-01,
-    9.53900782925491742847e-01,    9.62813654255815527284e-01,
-    9.70785775763706331929e-01,    9.77809358486918288561e-01,
-    9.83877540706057015509e-01,    9.88984395242991747997e-01,
-    9.93124937037443459632e-01,    9.96295134733125149166e-01,
-    9.98491950639595818382e-01,    9.99713726773441233703e-01
+//  16 pts
+static const double B16[] = {
+    9.50125098376374401877e-02,    2.81603550779258913231e-01,
+    4.58016777657227386350e-01,    6.17876244402643748452e-01,
+    7.55404408355003033891e-01,    8.65631202387831743866e-01,
+    9.44575023073232576090e-01,    9.89400934991649932601e-01
 };
 
-static const double A100[] = {
-    3.12554234538633569472e-02,    3.12248842548493577326e-02,
-    3.11638356962099067834e-02,    3.10723374275665165874e-02,
-    3.09504788504909882337e-02,    3.07983790311525904274e-02,
-    3.06161865839804484966e-02,    3.04040795264548200160e-02,
-    3.01622651051691449196e-02,    2.98909795933328309169e-02,
-    2.95904880599126425122e-02,    2.92610841106382766198e-02,
-    2.89030896011252031353e-02,    2.85168543223950979908e-02,
-    2.81027556591011733175e-02,    2.76611982207923882944e-02,
-    2.71926134465768801373e-02,    2.66974591835709626611e-02,
-    2.61762192395456763420e-02,    2.56294029102081160751e-02,
-    2.50575444815795897034e-02,    2.44612027079570527207e-02,
-    2.38409602659682059633e-02,    2.31974231852541216230e-02,
-    2.25312202563362727021e-02,    2.18430024162473863146e-02,
-    2.11334421125276415432e-02,    2.04032326462094327666e-02,
-    1.96530874944353058650e-02,    1.88837396133749045537e-02,
-    1.80959407221281166640e-02,    1.72904605683235824399e-02,
-    1.64680861761452126430e-02,    1.56296210775460027242e-02,
-    1.47758845274413017686e-02,    1.39077107037187726882e-02,
-    1.30259478929715422855e-02,    1.21314576629794974079e-02,
-    1.12251140231859771176e-02,    1.03078025748689695861e-02,
-    9.38041965369445795116e-03,    8.44387146966897140266e-03,
-    7.49907325546471157895e-03,    6.54694845084532276405e-03,
-    5.58842800386551515727e-03,    4.62445006342211935096e-03,
-    3.65596120132637518238e-03,    2.68392537155348241939e-03,
-    1.70939265351810523958e-03,    7.34634490505671730396e-04
+static const double A16[] = {
+    1.89450610455068496287e-01,    1.82603415044923588872e-01,
+    1.69156519395002538183e-01,    1.49595988816576732080e-01,
+    1.24628971255533872056e-01,    9.51585116824927848073e-02,
+    6.22535239386478928628e-02,    2.71524594117540948514e-02
 };
 
-#define NOPZ100  sizeof(B100) / sizeof(double)
-#define NOZ100   NOPZ100+NOPZ100
+#define NOPZ16  sizeof(B16) / sizeof(double)
+#define NOZ16   NOPZ16+NOPZ16
 
 
 double GLInteg(double a, double b, double (*f)(double))
@@ -137,10 +94,10 @@ double GLInteg(double a, double b, double (*f)(double))
    double c = 0.5 * (b - a);
    double d = 0.5 * (b + a);
    double dum;
-   const double *pB = &B100[NOPZ100 - 1];
-   const double *pA = &A100[NOPZ100 - 1];
+   const double *pB = &B16[NOPZ16 - 1];
+   const double *pA = &A16[NOPZ16 - 1];
 
-   for (; pB >= B100; pA--, pB--) {
+   for (; pB >= B16; pA--, pB--) {
       dum = c * *pB;
       integral += *pA * ( (*f)(d - dum) + (*f)(d + dum) );
    }
@@ -155,10 +112,10 @@ double GLInt3p(double a, double b, double (*f)(double,double,double),
    double c = 0.5 * (b - a);
    double d = 0.5 * (b + a);
    double dum;
-   const double *pB = &B100[NOPZ100 - 1];
-   const double *pA = &A100[NOPZ100 - 1];
+   const double *pB = &B16[NOPZ16 - 1];
+   const double *pA = &A16[NOPZ16 - 1];
 
-   for (; pB >= B100; pA--, pB--) {
+   for (; pB >= B16; pA--, pB--) {
       dum = c * *pB;
       integral += *pA * ( (*f)(d - dum,sig2,h) + (*f)(d + dum,sig2,h) );
    }
@@ -174,11 +131,11 @@ double GLInt3d(double a, double b,
    double c = 0.5 * (b - a);
    double d = 0.5 * (b + a);
    double dum;
-   const double *pB = &B100[NOPZ100 - 1];
-   const double *pA = &A100[NOPZ100 - 1];
-   int k=100;
+   const double *pB = &B16[NOPZ16 - 1];
+   const double *pA = &A16[NOPZ16 - 1];
+   int k=NOPZ16;
 
-   for (; pB >= B100; pA--, pB--,k--) {
+   for (; pB >= B16; pA--, pB--,k--) {
       dum = c * *pB;
       integral += *pA * ((*f)(d-dum,x,nsig[k]) 
 			 + (*f)(d + dum,x,psig[k]));
@@ -195,10 +152,10 @@ double GLInt4p(double a, double b, double (*f)(double,double*,double,int),
    double c = 0.5 * (b - a);
    double d = 0.5 * (b + a);
    double dum;
-   const double *pB = &B100[NOPZ100 - 1];
-   const double *pA = &A100[NOPZ100 - 1];
+   const double *pB = &B16[NOPZ16 - 1];
+   const double *pA = &A16[NOPZ16 - 1];
 
-   for (; pB >= B100; pA--, pB--) {
+   for (; pB >= B16; pA--, pB--) {
       dum = c * *pB;
       integral += *pA * ( (*f)(d - dum,ss,h,n) + (*f)(d + dum,ss,h,n) );
    }
@@ -214,10 +171,10 @@ double GLInt6p(double a, double b,
    double c = 0.5 * (b - a);
    double d = 0.5 * (b + a);
    double dum;
-   const double *pB = &B100[NOPZ100 - 1];
-   const double *pA = &A100[NOPZ100 - 1];
+   const double *pB = &B16[NOPZ16 - 1];
+   const double *pA = &A16[NOPZ16 - 1];
 
-   for (; pB >= B100; pA--, pB--) {
+   for (; pB >= B16; pA--, pB--) {
       dum = c * *pB;
       integral += *pA * ( (*f)(d - dum,h,g,sig,x,n) + (*f)(d + dum,h,g,sig,x,n) );
    }
@@ -333,17 +290,17 @@ void DKESupport(double *y,int *ny,double *x, int *nx,
   double c = 0.5 * (b - a);
   double d = 0.5 * (b + a);
   double dum, sb2,t,nt,pt;
-  int K=NOPZ100;  //K is changable
+  int K=NOPZ16;  //K is changable
   double ntexp[K],ptexp[K];  //K is changable
-  const double *pB = &B100[K - 1];  //K is changable 
-  const double *pA = &A100[K - 1];  //K is changable
+  const double *pB = &B16[K - 1];  //K is changable 
+  const double *pA = &A16[K - 1];  //K is changable
   double ppart1,npart1;
 
    switch(type[0]){
    case 0:
      sb2 = pow(sig[0]/bw[0],2.0)*0.5;
      k=K-1;
-     for (; pB >= B100; pA--, pB--,k--) {
+     for (; pB >= B16; pA--, pB--,k--) {
        dum = c * *pB;
        nt = pow(d-dum,2.0);
        ntexp[k] = pow(1.0-nt,3.0)*exp(sb2*nt);
@@ -356,9 +313,9 @@ void DKESupport(double *y,int *ny,double *x, int *nx,
        }
        k = K-1;
        integral = 0.0;
-       pB = &B100[K - 1];   
-       pA = &A100[K - 1];  
-       for (; pB >= B100; pA--, pB--,k--) {
+       pB = &B16[K - 1];   
+       pA = &A16[K - 1];  
+       for (; pB >= B16; pA--, pB--,k--) {
 	 dum = c * *pB;
 	 nt = d-dum;
 	 pt = d+dum;
@@ -376,7 +333,7 @@ void DKESupport(double *y,int *ny,double *x, int *nx,
    case 1:
      sb2 = pow(sig[0]/bw[0],2.0)*0.5;
      k=K-1;
-     for (; pB >= B100; pA--, pB--,k--) {
+     for (; pB >= B16; pA--, pB--,k--) {
        dum = c * *pB;
        t= d-dum;
        nt = pow(t,2.0);
@@ -391,9 +348,9 @@ void DKESupport(double *y,int *ny,double *x, int *nx,
        }
        k = K-1;
        integral = 0.0;
-       pB = &B100[K - 1];   
-       pA = &A100[K - 1];  
-       for (; pB >= B100; pA--, pB--,k--) {
+       pB = &B16[K - 1];   
+       pA = &A16[K - 1];  
+       for (; pB >= B16; pA--, pB--,k--) {
 	 dum = c * *pB;
 	 nt = d-dum;
 	 pt = d+dum;
@@ -422,12 +379,12 @@ void densHSupport(double y[],int ny,double x[], int nx,
   double c = 0.5 * (b - a);
   double d = 0.5 * (b + a);
   double dum;
-  int K=NOPZ100;  //K is changable
+  int K=NOPZ16;  //K is changable
   double nt[K], pt[K], nt2[K], pt2[K],nt3[K],pt3[K];
   double sigh[ny], z[ny];
   double nsig[K][ny], psig[K][ny];
-  const double *pB = &B100[K - 1];  //K is changable 
-  const double *pA = &A100[K - 1];  //K is changable
+  const double *pB = &B16[K - 1];  //K is changable 
+  const double *pA = &A16[K - 1];  //K is changable
   double nsum, psum;
 
   nsum = bw*bw;//reuse valuable
@@ -435,7 +392,7 @@ void densHSupport(double y[],int ny,double x[], int nx,
     sigh[j] = -0.5 * pow(sig[j],2.0)/nsum;
   }
   k=K-1;
-  for (; pB >= B100; pA--, pB--,k--) {
+  for (; pB >= B16; pA--, pB--,k--) {
     dum = c * *pB;
     nt[k] = d-dum;
     nt2[k] = pow(nt[k],2.0);
@@ -461,9 +418,9 @@ void densHSupport(double y[],int ny,double x[], int nx,
     }
     k = K-1;
     integral = 0.0;
-    pB = &B100[K - 1];   
-    pA = &A100[K - 1];  
-    for (; pB >= B100; pA--, pB--,k--) {
+    pB = &B16[K - 1];   
+    pA = &A16[K - 1];  
+    for (; pB >= B16; pA--, pB--,k--) {
       nsum=0.0;psum=0.0;
       for(j=0;j<ny;j++){
 	nsum += cos(nt[k]*z[j]) * nsig[k][j];
@@ -490,12 +447,12 @@ void DKEHSupport(double *y,int *ny,double *x, int *nx,
   double c = 0.5 * (b - a);
   double d = 0.5 * (b + a);
   double dum;
-  int K=NOPZ100;  //K is changable
+  int K=NOPZ16;  //K is changable
   double nt[K], pt[K], nt2[K], pt2[K],nt3[K],pt3[K];
   double sigh[ny[0]], z[ny[0]];
   double nsig[K][ny[0]], psig[K][ny[0]];
-  const double *pB = &B100[K - 1];  //K is changable 
-  const double *pA = &A100[K - 1];  //K is changable
+  const double *pB = &B16[K - 1];  //K is changable 
+  const double *pA = &A16[K - 1];  //K is changable
   double nsum, psum;
 
   nsum = bw[0]*bw[0];//reuse valuable
@@ -503,7 +460,7 @@ void DKEHSupport(double *y,int *ny,double *x, int *nx,
     sigh[j] = -0.5 * pow(sig[j],2.0)/nsum;
   }
   k=K-1;
-  for (; pB >= B100; pA--, pB--,k--) {
+  for (; pB >= B16; pA--, pB--,k--) {
     dum = c * *pB;
     nt[k] = d-dum;
     nt2[k] = pow(nt[k],2.0);
@@ -531,9 +488,9 @@ void DKEHSupport(double *y,int *ny,double *x, int *nx,
        }
        k = K-1;
        integral = 0.0;
-       pB = &B100[K - 1];   
-       pA = &A100[K - 1];  
-       for (; pB >= B100; pA--, pB--,k--) {
+       pB = &B16[K - 1];   
+       pA = &A16[K - 1];  
+       for (; pB >= B16; pA--, pB--,k--) {
 	 nsum=0.0;psum=0.0;
 	 for(j=0;j<ny[0];j++){
 	   nsum += cos(nt[k]*z[j]) * nsig[k][j];
@@ -552,9 +509,9 @@ void DKEHSupport(double *y,int *ny,double *x, int *nx,
        }
        k = K-1;
        integral = 0.0;
-       pB = &B100[K - 1];   
-       pA = &A100[K - 1];  
-       for (; pB >= B100; pA--, pB--,k--) {
+       pB = &B16[K - 1];   
+       pA = &A16[K - 1];  
+       for (; pB >= B16; pA--, pB--,k--) {
 	 nsum=0.0;psum=0.0;
 	 for(j=0;j<ny[0];j++){
 	   nsum += sin(nt[k]*z[j]) * nsig[k][j];
@@ -928,14 +885,14 @@ void NPRSupport(double *y,int *ny,double *zs,double *x, int *nx,
   double c = 0.5 * (b - a);
   double d = 0.5 * (b + a);
   double dum, sb2,nt,pt;
-  int K=NOPZ100;  //K is changable
+  int K=NOPZ16;  //K is changable
   double ntexp[K],ptexp[K];  //K is changable
-  const double *pB = &B100[K - 1];  //K is changable 
-  const double *pA = &A100[K - 1];  //K is changable
+  const double *pB = &B16[K - 1];  //K is changable 
+  const double *pA = &A16[K - 1];  //K is changable
   double ppart1,npart1,denom,tmp0,ppart2,npart2;
   sb2 = pow(sig[0]/bw[0],2.0)*0.5;
   k=K-1;
-  for (; pB >= B100; pA--, pB--,k--) {
+  for (; pB >= B16; pA--, pB--,k--) {
     dum = c * *pB;
     nt = pow(d-dum,2.0);
     ntexp[k] = pow(1.0-nt,3.0)*exp(sb2*nt);
@@ -948,9 +905,9 @@ void NPRSupport(double *y,int *ny,double *zs,double *x, int *nx,
     }
     k = K-1;
     integral = 0.0;denom=0.0;
-    pB = &B100[K - 1];   
-    pA = &A100[K - 1];  
-    for (; pB >= B100; pA--, pB--,k--) {
+    pB = &B16[K - 1];   
+    pA = &A16[K - 1];  
+    for (; pB >= B16; pA--, pB--,k--) {
       dum = c * *pB;
       nt = d-dum;
       pt = d+dum;
@@ -979,12 +936,12 @@ void NPRHSupport(double *y,int *ny,double *zs,double *x, int *nx,
   double c = 0.5 * (b - a);
   double d = 0.5 * (b + a);
   double dum;
-  int K=NOPZ100;  //K is changable
+  int K=NOPZ16;  //K is changable
   double nt[K], pt[K], nt2[K], pt2[K],nt3[K],pt3[K];
   double sigh[ny[0]], z[ny[0]];
   double nsig[K][ny[0]], psig[K][ny[0]];
-  const double *pB = &B100[K - 1];  //K is changable 
-  const double *pA = &A100[K - 1];  //K is changable
+  const double *pB = &B16[K - 1];  //K is changable 
+  const double *pA = &A16[K - 1];  //K is changable
   double nsum, psum,denom,tmp0,nsum2,psum2;
 
   nsum = bw[0]*bw[0];//reuse valuable
@@ -992,7 +949,7 @@ void NPRHSupport(double *y,int *ny,double *zs,double *x, int *nx,
     sigh[j] = -0.5 * pow(sig[j],2.0)/nsum;
   }
   k=K-1;
-  for (; pB >= B100; pA--, pB--,k--) {
+  for (; pB >= B16; pA--, pB--,k--) {
     dum = c * *pB;
     nt[k] = d-dum;
     nt2[k] = pow(nt[k],2.0);
@@ -1019,9 +976,9 @@ void NPRHSupport(double *y,int *ny,double *zs,double *x, int *nx,
     }
     k = K-1;
     integral = 0.0;denom=0.0;
-    pB = &B100[K - 1];   
-    pA = &A100[K - 1];  
-    for (; pB >= B100; pA--, pB--,k--) {
+    pB = &B16[K - 1];   
+    pA = &A16[K - 1];  
+    for (; pB >= B16; pA--, pB--,k--) {
       nsum=0.0;psum=0.0;nsum2=0.;psum2=0.;
       for(j=0;j<ny[0];j++){
 	nsum += cos(nt[k]*z[j]) * nsig[k][j];
@@ -1187,10 +1144,10 @@ void dkdenest(double *y, double *sig, int *ny,
   double c = 0.5 * (b - a);
   double d = 0.5 * (b + a);
   double dum, sb2,nt,pt;
-  int K=NOPZ100;  //K is changable
+  int K=NOPZ16;  //K is changable
   double ntexp[K],ptexp[K];  //K is changable
-  const double *pB = &B100[K - 1];  //K is changable 
-  const double *pA = &A100[K - 1];  //K is changable
+  const double *pB = &B16[K - 1];  //K is changable 
+  const double *pA = &A16[K - 1];  //K is changable
   double ppart1,npart1;
 
   //Fun4p f[1];
@@ -1200,7 +1157,7 @@ void dkdenest(double *y, double *sig, int *ny,
   case 0:
     sb2 = pow(sig[0]/bw[0],2.0)*0.5;
     k=K-1;
-    for (; pB >= B100; pA--, pB--,k--) {
+    for (; pB >= B16; pA--, pB--,k--) {
       dum = c * *pB;
       nt = pow(d-dum,2.0);
       ntexp[k] = pow(1.0-nt,3.0)*exp(sb2*nt);
@@ -1213,9 +1170,9 @@ void dkdenest(double *y, double *sig, int *ny,
       }
       k = K-1;
       integral = 0.0;
-      pB = &B100[K - 1];   
-      pA = &A100[K - 1];  
-      for (; pB >= B100; pA--, pB--,k--) {
+      pB = &B16[K - 1];   
+      pA = &A16[K - 1];  
+      for (; pB >= B16; pA--, pB--,k--) {
 	dum = c * *pB;
 	nt = d-dum;
 	pt = d+dum;
@@ -1276,15 +1233,15 @@ void pdfHSupport(double *x0, double *Sn, int *nx0,
   
   /* nt[] and pt[] will be used as gloabl variable within this
      function. */
-  int k, K=NOPZ100;  //K is changable (Integral & here)
+  int k, K=NOPZ16;  //K is changable (Integral & here)
   double nt, nt2, nt3, pt, pt2, pt3, dum, psum, nsum;
   double nsig[K][n], psig[K][n];
   double nsig2[K], psig2[K]; //to be pass co compute integrals  
-  const double *pB = &B100[K - 1];  //K is changable 
-  const double *pA = &A100[K - 1];  //K is changable
+  const double *pB = &B16[K - 1];  //K is changable 
+  const double *pA = &A16[K - 1];  //K is changable
 
   k=K-1;
-  for (; pB >= B100; pA--, pB--,k--) {
+  for (; pB >= B16; pA--, pB--,k--) {
     dum = 0.5 * *pB;
 
     nt = 0.5 - dum;
@@ -1359,15 +1316,15 @@ void pdfHLaplace(double *x0, double *Sn, int *nx0,
   
   /* nt[] and pt[] will be used as gloabl variable within this
      function. */
-  int k, K=NOPZ100;  //K is changable (Integral & here)
+  int k, K=NOPZ16;  //K is changable (Integral & here)
   double nt, nt2, nt3, pt, pt2, pt3, dum, psum, nsum;
   double nsig[K][n], psig[K][n];
   double nsig2[K], psig2[K]; //to be pass co compute integrals  
-  const double *pB = &B100[K - 1];  //K is changable 
-  const double *pA = &A100[K - 1];  //K is changable
+  const double *pB = &B16[K - 1];  //K is changable 
+  const double *pA = &A16[K - 1];  //K is changable
 
   k=K-1;
-  for (; pB >= B100; pA--, pB--,k--) {
+  for (; pB >= B16; pA--, pB--,k--) {
     dum = 0.5 * *pB;
 
     nt = 0.5 - dum;
@@ -1511,15 +1468,15 @@ void nprHLapSAVE(double *x0,  int *nx0,
   
   /* nt[] and pt[] will be used as gloabl variable within this
      function. */
-  int k, K=NOPZ100;  //K is changable (Integral & here)
+  int k, K=NOPZ16;  //K is changable (Integral & here)
   double nt, pt, dum, psum, nsum;
   double nsig[K][n], psig[K][n];
   double nsig2[K], psig2[K]; //to be pass co compute integrals  
-  const double *pB = &B100[K - 1];  //K is changable 
-  const double *pA = &A100[K - 1];  //K is changable
+  const double *pB = &B16[K - 1];  //K is changable 
+  const double *pA = &A16[K - 1];  //K is changable
 
   k=K-1;
-  for (; pB >= B100; pA--, pB--,k--) {
+  for (; pB >= B16; pA--, pB--,k--) {
     dum = 0.5 * *pB;
 
     nt = 0.5 - dum; 
@@ -1600,10 +1557,10 @@ double GLInt5p(double a, double b,
    double c = 0.5 * (b - a);
    double d = 0.5 * (b + a);
    double dum;
-   const double *pB = &B100[NOPZ100 - 1];
-   const double *pA = &A100[NOPZ100 - 1];
+   const double *pB = &B16[NOPZ16 - 1];
+   const double *pA = &A16[NOPZ16 - 1];
 
-   for (; pB >= B100; pA--, pB--) {
+   for (; pB >= B16; pA--, pB--) {
       dum = c * *pB;
       integral += *pA * ( (*f)(d - dum,z,h,sig,j,n) + (*f)(d + dum,z,h,sig,j,n) );
    }
@@ -1810,8 +1767,8 @@ void lprLap(double *x0,  int *nx0,
 	     double *x, double *y, double *sig, int *size,
 	     double *bw, double *gcv)
 {
-  Fun5p f[1];
-  f[0] = subhlap;
+  // Fun5p f[1];
+  // f[0] = subhlap;
 
   int i,j,m,n;
   n = size[0];

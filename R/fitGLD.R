@@ -11,17 +11,17 @@
 
 fit.GLD <- function(x,qtl,qtl.levels,lbound,ubound){
     
-    if(class(x) == 'numeric'){
+    if(inherits(x,'numeric')){
         xh <- hist(x, plot=FALSE)
         x <- binning(xh)
-    }else if(class(x) == 'histogram'){
+    }else if(inherits(x,'histogram')){
         x <- binning(x)
     }
 
     if(missing(lbound)) lbound <- NULL
     if(missing(ubound)) ubound <- NULL
     
-    if(class(x) != 'bdata')
+    if(!inherits(x,'bdata'))
         stop("data type not supported")
 
     xhist <- x
@@ -97,7 +97,7 @@ fit.GLD <- function(x,qtl,qtl.levels,lbound,ubound){
 
 .findQTL <- function(x)
 {
-    if(class(x) != 'bdata')
+    if(!inherits(x,'bdata'))
         stop("data type not supported")
     xbrks <- x$breaks
     Fn <- cumsum(x$freq)/sum(x$freq)

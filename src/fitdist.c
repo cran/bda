@@ -419,7 +419,7 @@ void rootGldFmklBisection(double *q, double *lambdas)
 {
   int  iter=100, ctr=1;
   double delta=0.5, tol=1.e-8;
-  double l1=0.0, l2=1.0, r, f1, f2, f3;
+  double l1=0.0, l2=1.0, r=0.0, f1, f2, f3;
   if(!isfinite(q[0])){
     if(q[0]>0.)
       r = 0.0;
