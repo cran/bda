@@ -1238,10 +1238,10 @@ void pdfHSupport(double *x0, double *Sn, int *nx0,
   double nsig[K][n], psig[K][n];
   double nsig2[K], psig2[K]; //to be pass co compute integrals  
   const double *pB = &B16[K - 1];  //K is changable 
-  const double *pA = &A16[K - 1];  //K is changable
+  //  const double *pA = &A16[K - 1];  //K is changable
 
   k=K-1;
-  for (; pB >= B16; pA--, pB--,k--) {
+  for (; pB >= B16; pB--,k--) {
     dum = 0.5 * *pB;
 
     nt = 0.5 - dum;
@@ -1321,10 +1321,10 @@ void pdfHLaplace(double *x0, double *Sn, int *nx0,
   double nsig[K][n], psig[K][n];
   double nsig2[K], psig2[K]; //to be pass co compute integrals  
   const double *pB = &B16[K - 1];  //K is changable 
-  const double *pA = &A16[K - 1];  //K is changable
+  //  const double *pA = &A16[K - 1];  //K is changable
 
   k=K-1;
-  for (; pB >= B16; pA--, pB--,k--) {
+  for (; pB >= B16; pB--,k--) {
     dum = 0.5 * *pB;
 
     nt = 0.5 - dum;
@@ -1473,10 +1473,10 @@ void nprHLapSAVE(double *x0,  int *nx0,
   double nsig[K][n], psig[K][n];
   double nsig2[K], psig2[K]; //to be pass co compute integrals  
   const double *pB = &B16[K - 1];  //K is changable 
-  const double *pA = &A16[K - 1];  //K is changable
+  //  const double *pA = &A16[K - 1];  //K is changable
 
   k=K-1;
-  for (; pB >= B16; pA--, pB--,k--) {
+  for (; pB >= B16; pB--,k--) {
     dum = 0.5 * *pB;
 
     nt = 0.5 - dum; 

@@ -1,7 +1,7 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{fit.lnorm}
+\name{fit.lognormal}
 \alias{fit.lnorm}
 \alias{fit.lognormal}
 \alias{mixlognormal}
@@ -15,11 +15,13 @@
  To fit log-normal distributions to raw data.
 }
 \usage{
-fit.lognormal(x, k=1)
+fit.lognormal(x, k=1,normal=FALSE)
 }
 \arguments{
   \item{x}{Raw data or grouped data}
   \item{k}{number of components, Default: 1}
+  \item{normal}{Fit normal mixture models if 'normal=TRUE'; otherwise
+    fit log-normal mixture models.}
 }
 \value{
  \item{p0}{The estimated proportion of zeros.}

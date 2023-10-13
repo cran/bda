@@ -359,19 +359,21 @@ print.FSD <- function(x,...){
     cat("Fitting Firm Size Distribution(s)...")
     res <- x$x.fit
     cat("\n x: ", res$dist)
-    cat("\n fitted parameters: ", as.numeric(res$pars))
+    cat("\n fitted parameters: ",
+        signif(as.numeric(res$pars), digits=3))
     if(!is.null(res$aux)){
         cat("\nGoodness-of-fit:\n")
-        print(res$aux)
+        print(signif(res$aux,digits=3))
     }
     
     if(!is.null(x$y.fit)){
         res <- x$y.fit
         cat("\n\n y: ", res$dist)
-        cat("\n fitted parameters: ", as.numeric(res$pars))
+        cat("\n fitted parameters: ",
+            signif(as.numeric(res$pars)),digits=3)
         if(!is.null(res$aux)){
             cat("\nGoodness-of-fit:\n")
-            print(res$aux)
+            print(signif(res$aux,digits=3))
         }
         
         cat("\n Psi :=", x$Psi)
@@ -388,7 +390,7 @@ print.FSD <- function(x,...){
                         "ewd","gld","gld1","gld2",
                         "mep","ep", "mixed","exp",
                         "lnorm","lognormal","kde",
-                        "bkde","spline"))
+                        "bkde","spline","norm"))
     if(inherits(x,"histogram")){
         brks <- x$breaks
         cnts <- x$counts
@@ -423,6 +425,8 @@ print.FSD <- function(x,...){
         res <- .fit.MEP(freq=cnts,breaks=brks)
     else if(dist=="lnorm"||dist=="lognormal")
         res <- .fit.lnorm(freq=cnts,breaks=brks)
+    else if(dist=="norm")
+        res <- .fit.norm(freq=cnts,breaks=brks)
     else if(dist=="spline")
         res <- .fit.spline(freq=cnts,breaks=brks)
     else
@@ -481,7 +485,112 @@ print.FSD <- function(x,...){
 }
 
 ####################################################
+.fit.norm <- function(freq,breaks){
+    k <- length(freq)
+    n <- sum(freq)
+    Fn <- cumsum(freq)/(n+1)
+    ## find initial estimates using LSE
+    if(is.finite(breaks[k+1])){
+        xi <- breaks[-1]
+        zi <- qnorm(Fn)
+    }else{
+        xi <- breaks[-c(1,k+1)]
+        zi <- qnorm(Fn[-k])
+    }
+    lm0 <- lm(xi~zi)
+    shat <- lm0$coef[[2]]
+    muhat <- lm0$coef[[1]]
+    par1 <- c(muhat,shat)
+    pars <- par1
 
+    ##print(pars)
+    
+    x0 <- breaks[-c(1,k+1)]
+    Fx <- pnorm(x0, par1[1], par1[2])
+    llk <- sum(log(diff(c(0,Fx,1)))*freq)
+    AIC1 <- .AIC(llk,2,n)
+    Dn.Zipf1 <- .funCOD(freq,Fx)
+    L1 <- .funL2(freq,Fx)
+    ## find MLE
+    options(warn=-1)
+    out <- optim(par1, .funNORM, 
+                 freq=freq, brks=breaks)
+    if(out$conv==0){
+        par2 <- out$par
+        pars <- par2
+        x0 <- breaks[-c(1,k+1)]
+        Fx <- pnorm(x0, par2[1], par2[2])
+        llk <- sum(log(diff(c(0,Fx,1)))*freq)
+        AIC2 <- .AIC(llk,2,n)
+        Dn.Zipf2 <- .funCOD(freq,Fx)
+        L2 <- .funL2(freq,Fx)
+    }else{
+        par2 <- c(NA, NA)
+        AIC2 <- list(AIC=NA, BIC=NA, AICc=NA)
+        Dn.Zipf2 <- NA
+        L2 <- NA
+    }
+    options(warn=0)
+
+    x <- breaks
+    k <- length(x)
+    
+    y <- dnorm(x, pars[1],pars[2])
+    y2 <- pnorm(x, pars[1],pars[2])
+    a <- x[1];b <- rev(x)[1]
+    if(a<=0) a <- 0.1
+    if(!is.finite(b)) b <- 2*rev(x)[2]-rev(x)[3]
+    lx <- exp(seq(log(a),log(b),length=401))
+    ly <- dnorm(lx, pars[1],pars[2])
+                 
+    Fx <- y2[-c(1,k)]
+    llk <- sum(log(diff(c(0,Fx,1)))*freq)
+    AIC0 <- .AIC(llk,1,n)
+    Dn.Zipf0 <- .funCOD(freq,Fx)
+    L0 <- .funL2(freq,Fx)
+    
+    
+    tmp <- data.frame(mean.log = c(par1[1],par2[1]),
+                      sd.log = c(par1[2],par2[2]),
+                      Dn.Zipf = c(Dn.Zipf1,Dn.Zipf2),
+                      Dn = c(L1,L2),
+                      AIC = c(AIC1$AIC,AIC2$AIC),
+                      BIC = c(AIC1$BIC,AIC2$BIC),
+                      AICc = c(AIC1$AICc,AIC2$AICc))
+    
+    rownames(tmp) <- c("LSE","MLE")
+  
+    list(pars=pars, aux=tmp,
+         Dn.Zipf=Dn.Zipf0,Dn=L0,
+         AIC=AIC0$AIC,
+         BIC=AIC0$BIC,
+         AICc=AIC0$AICc,
+         x=x,y=y,y2=y2,lx=lx,ly=ly)
+}
+
+.funNORM <- function(pars,freq,brks){
+    n <- length(brks)
+    stopifnot(length(freq)+1==n)
+    brks <- brks[-c(1,n)]
+    Fx = pnorm(brks, pars[1], pars[2])
+    if(any(is.na(Fx))){
+        llk <- 1.0e+9
+    }else{
+        Px <- diff(c(0,Fx,1))
+        sele = Px <= 1.0e-6
+        delta = 0 #penalty
+        if(any(sele)){
+            Px = Px[!sele]
+            freq = freq[!sele]
+            delta = 1.0e+6 * sum(freq[sele])
+        }
+        llk <- delta-sum(log(Px)*freq)
+    }
+    if(!is.finite(llk)) llk <- .Machine$double.xmax
+    llk
+}
+
+####################################################
 .fit.lnorm <- function(freq,breaks){
     k <- length(freq)
     n <- sum(freq)
@@ -511,9 +620,7 @@ print.FSD <- function(x,...){
     ## find MLE
     options(warn=-1)
     out <- optim(par1, .funLNORM, 
-                 freq=freq, brks=breaks)#,
-#                 lower=c(par1[1]*.5,par1[2]*.5),
-#                 upper=c(par1[1]*2,par1[2]*2))
+                 freq=freq, brks=breaks)
     if(out$conv==0){
         par2 <- out$par
         pars <- par2

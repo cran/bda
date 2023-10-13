@@ -58,6 +58,9 @@ void F77_SUB(wlinbin)(double *x, double *w, int *n, double *a,
 
 void F77_SUB(yldist)(double *gcounts, int *m, double *y);
 
+//binning.f
+void F77_SUB(probin)(double *x, double *y, int *n, double *a,
+		      double *b, int *m, double *gcounts);
 
 // cKDE.c
 void dKDE(double *x0, int *n0, double *xc, double *h, 
@@ -246,6 +249,7 @@ static const R_FortranMethodDef FortEntries[] = {
   {"wkde", (DL_FUNC) & wkde, 8},
   {"wlinbin", (DL_FUNC) &F77_SUB(wlinbin),  8},
   {"yldist", (DL_FUNC) &F77_SUB(yldist),  3},
+  {"probin", (DL_FUNC) &F77_SUB(probin), 7},
 
   {"wnpr", (DL_FUNC) & wnpr, 8},
   {"wdekde", (DL_FUNC) & wdekde, 7},
@@ -258,14 +262,12 @@ static const R_FortranMethodDef FortEntries[] = {
   {"lprLap", (DL_FUNC) & lprLap, 8},
   {"wlprNorm", (DL_FUNC) & wlprNorm, 8},
   {"awlprNorm", (DL_FUNC) & awlprNorm, 7},
-
   {NULL, NULL, 0}
 };
 
 
 void R_init_bda(DllInfo *dll)
 {
-  //    R_registerRoutines(dll, NULL, NULL, callMethods, NULL);
   R_registerRoutines(dll, NULL, NULL, FortEntries, NULL);
   R_useDynamicSymbols(dll, FALSE);
 }

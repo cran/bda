@@ -1,7 +1,7 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{mlorm}
+\name{mlnorm}
 \alias{pmlnorm}
 \alias{dmlnorm}
 \alias{qmlnorm}

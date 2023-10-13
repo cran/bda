@@ -2,7 +2,7 @@
   library.dynam.unload("bda",  libpath)
 
 .onAttach <- function(libname, pkgname)
-    packageStartupMessage("bda v15 (Bin Wang, 2021)")
+    packageStartupMessage("bda v17 (Bin Wang, 2023)")
 
 .bdaConnect <- NULL
 

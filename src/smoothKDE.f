@@ -1,3 +1,51 @@
+cccccccccc FORTRAN subroutine binPRO.f cccccccccc
+
+c redistribute interval type PRO data via binning
+c Last changed: 11 Oct 2023
+
+      subroutine probin(X,Y,n,a,b,M,gcnts)
+      double precision X(*),Y(*),a,b,gcnts(*),lxi,lyi,delta,rem,dx
+      integer n,M,i,li,lj
+
+c     Initialize grid counts to zero
+
+      do 10 i=1,M
+         gcnts(i) = dble(0)
+10    continue
+
+      delta = (b-a)/M
+      do 30 i=1,n
+         lxi = ((X(i)-a)/delta) + 1
+         lyi = ((Y(i)-a)/delta) + 1
+         dx = (Y(i) - X(i))/delta
+
+c        Find integer part of "lxi"
+
+         li = int(lxi) 
+         lj = int(lyi)
+
+         if(li.eq.lj) then
+            gcnts(li) = gcnts(li) + 1
+         else
+            do 20 j=li,lj
+               if (j.lt.lj.and.j.eq.li) then
+                  rem = lxi - li
+                  gcnts(j) = gcnts(j) + (1-rem)/dx
+               elseif (j.lt.lj.and.j.gt.li) then
+                  gcnts(j) = gcnts(j) + 1
+               else
+                  rem = lyi - lj
+                  gcnts(j) = gcnts(j) + rem/dx
+               endif
+ 20         continue
+
+         endif
+
+ 30   continue
+
+      return
+      end
+cccccccccc End of binPRO.f cccccccccc
 
 ccccccccccFORTRAN subroutine smoothkde cccccccccc
 
@@ -29,40 +77,48 @@ c     2013/04/01.
          gk(i) = twopih * exp(-0.5*t1*t1)
       end do
 
+      do i=1, n
+         do j=1, n
+            fk(i,j) = 0.0
+         enddo
+      enddo
 
       do i=1, n-1
          fk(i,i) = gk(1)
          do j=i+1, n
             fk(i,j) = gk(j-i)
-            fk(j,i) = fk(i,j)
+            fk(j,i) = gk(j-i)
          enddo
       enddo
+
       fk(n,n) = gk(1)
 
-       loop = 0
-       df = 1.0
-       do while((loop.LT.iter) .AND. (df.GT.0.0001))
-          df = 0.0
-          do 500 k=1,n
-             fx(k) = 0.0
-             do 450 i=1, m
-                xl = x(i) - w
-                xu = x(i) + w
-                i1 = max0(1, ceiling((xl-x0(1))/dx))
-                i2 = min0(n, floor((xu-x0(1))/dx))
-                t1 = 0.0
-                t2 = 0.0
-                do 400 j=i1,i2
-                   t1 = t1 + fk(k,j)*f0(j)
-                   t2 = t2 + f0(j)
- 400            enddo
-                fx(k) = fx(k) + f(i)*t1/t2/nsum
- 450         enddo
-             df = df + (fx(k) - f0(k))**2.0
-             f0(k) = fx(k)
- 500      enddo
-       enddo
+      loop = 0
+      df = 1.0
+      do while((loop.LT.iter) .AND. (df.GT.0.0001))
+         df = 0.0
+         do 500 k=1,n
+            fx(k) = 0.0
+            do 450 i=1, m
+               xl = x(i) - w
+               xu = x(i) + w
+               i1 = max0(1, ceiling((xl-x0(1))/dx))
+               i2 = min0(n, floor((xu-x0(1))/dx))
+               t1 = 0.0
+               t2 = 0.0
+               do 400 j=i1,i2
+                  t1 = t1 + fk(k,j)*f0(j)
+                  t2 = t2 + f0(j)
+ 400           enddo
+               fx(k) = fx(k) + f(i)*t1/t2/nsum
+ 450        enddo
+            df = df + (fx(k) - f0(k))**2.0
+            f0(k) = fx(k)
+ 500     enddo
+      enddo
       iter = loop
+
+      return
       end
       
 cccccccccc End of smoothkde cccccccccc
