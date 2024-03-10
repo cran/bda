@@ -9,7 +9,7 @@
   Tests for effectiveness evaluations based on PROs.
 }
 \usage{
- pro.test(x,y,group,cutoff,class.names,conf.level,x.range,delta)
+ pro.test(x,y,group,cutoff,x.range,type)
 }
 \arguments{
 \item{x,y}{
@@ -22,17 +22,11 @@
   Class boundaries to define states. Works only when 'x' and 'y' are
   numeric.
 }
-\item{class.names}{
-  Labels/names for the states/classes.
-}
-\item{conf.level}{
-  confidence level.
-}
 \item{x.range}{
   Range of the scores for 'x' and 'y'.
 }
-\item{delta}{
-  an offset added to the class boundaries for sensitivity analyses.
+\item{type}{
+  Data (grouping/binning) type: 'vas', 'nrs', 'wbf'.
 }
 }
 \value{

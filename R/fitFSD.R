@@ -23,25 +23,38 @@ fit.FSD <- function(x,breaks,dist){
     Psi <- NULL
     Psi.rng <- NULL
     if(is.matrix(x)){
-        if(missing(breaks))
-            stop("'breaks' cannot be missing for bivariate distribution")
-        if(missing(breaks))
-            stop("'breaks' cannot be missing")
-        x.breaks <- breaks$age
+        if(nrow(x) == 2){
+            x <- t(x)
+        }
+        if(ncol(x) == 2){
+            n.na <- apply(is.na(x),1,sum)
+            if(any(n.na > 0)){
+                x <- x[n.na == 0,]
+                if(nrow(x) < 10)
+                    stop("too few data points")
+            }
+            out <- binning(x,breaks=breaks)
+            xy <- out$xy
+            breaks <- out$breaks
+        }else{
+            if(missing(breaks))
+                stop("'breaks' cannot be missing for bivariate distribution")
+            xy <- x
+        }
+        x.breaks <- breaks$x # in column-direct
         if(any(diff(x.breaks)<=0))
             stop("invalid value(s) in 'breaks' for x-variable")
-        y.breaks <- breaks$size
+        y.breaks <- breaks$y # in row-direction
         if(any(diff(y.breaks)<=0))
             stop("invalid value(s) in 'breaks' for y-variable")
         
-        xy <- x
         if(any(is.na(xy)))
             stop("missing value(s) in 'x'")
         if(any(!is.finite(xy)))
             stop("infinite value(s) in 'x'")
         
-        x <- apply(xy,1,sum)
-        y <- apply(xy,2,sum)
+        x <- apply(xy,2,sum)
+        y <- apply(xy,1,sum)
         
         if(missing(dist)){
             x.dist <- "GLD2"
@@ -56,7 +69,6 @@ fit.FSD <- function(x,breaks,dist){
                 y.dist <- dist[2]
             }
         }
-                
         xb <- binning(counts=x,breaks=x.breaks)
         x.fit <- .fit.FSD1(xb,dist=x.dist)
 
@@ -1835,38 +1847,40 @@ print.FSD <- function(x,...){
 
 .llkCopula <- function(psi, Fx, Fy, cnts){
 
-  ## Computing P(cell_ij)
-  Fxy <- .cdfCopula(psi,Fx, Fy)
-
-  ##cat("\nDim of 'Fxy'\n")
-  ##print(dim(Fxy))
-
-  Mxy <- matrix(0, nrow=nrow(Fxy)-1,
-                ncol=ncol(Fxy)-1)
-
-  ##cat("\nDim of 'Mxy'\n")
-  ##print(dim(Mxy))
-
-  
-  for(i in 1:nrow(Mxy)){
-    for(j in 1:ncol(Mxy)){
-      Mxy[i,j] <- Fxy[i+1,j+1]+Fxy[i,j]-Fxy[i+1,j]-Fxy[i,j+1]
+    ## Computing P(cell_ij)
+    Fxy <- .cdfCopula(psi,Fx, Fy)
+    
+    ##cat("\nDim of 'Fxy'\n")
+    ##print(dim(Fxy))
+    
+    Mxy <- matrix(0, nrow=nrow(Fxy)-1,
+                  ncol=ncol(Fxy)-1)
+    
+    ##cat("\nDim of 'Mxy'\n")
+    ##print(dim(Mxy))
+    
+    
+    for(i in 1:nrow(Mxy)){
+        for(j in 1:ncol(Mxy)){
+            Mxy[i,j] <- Fxy[i+1,j+1]+Fxy[i,j]-Fxy[i+1,j]-Fxy[i,j+1]
+        }
     }
-  }
-  Mxy[is.na(Mxy)] <- 0
-  tmp <- min(Mxy[Mxy>0])
-  Mxy[Mxy<=0] <- tmp/100
-
-  ##cat("\nDim of 'Mxy'\n")
-  ##print(dim(Mxy))
-
-  ##cat("\nDim of 'cntx (xy)'\n")
-  ##print(dim(cnts))
-
-  
-  res2 <- sum(log(Mxy)*cnts)
-  #list(LLK=res2,LL0=res1)
-  -res2
+    Mxy[is.na(Mxy)] <- 0
+    tmp <- min(Mxy[Mxy>0])
+    Mxy[Mxy<=0] <- tmp/100
+    
+    ##cat("\nDim of 'Mxy'\n")
+    ##print(dim(Mxy))
+    
+    ##cat("\nDim of 'cntx (xy)'\n")
+    ##print(dim(cnts))
+    
+    ##print(Mxy)
+    ##print(cnts)
+    
+    res2 <- sum(log(Mxy)*t(cnts))
+    ##list(LLK=res2,LL0=res1)
+    -res2
 }
 
 .X2Copula <- function(psi, Fx, Fy, cnts){

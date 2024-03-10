@@ -1,56 +1,89 @@
 #####################################################################
 ## Created on Oct 11, 2023 by Bin Wang
-##Laste updated on Oct 11, 2023
+##Laste updated on Oct 14, 2023
+
+## if 'x' is a matrix or data.frome with 2 columns, assume it is
+## interval-valuded PRO; otherwise single value PRO measures (VAS or
+## NRS), and estimate via binning.
 
 fit.PRO <- function(x,dist,x.range,nclass){
     if(missing(dist)) dist <- "norm"
     else dist <- as.character(dist)
 
     if(inherits(x,"data.frame")) x <- as.matrix(x)
-
     
     if(inherits(x,"matrix")){
-        if(ncol(x) != 2)
+        if(ncol(x) == 1){
+            xb <- binning(x[,1])
+        }else if(ncol(x) == 2){
+            xb <- .mybinPRO(ll=x[,1],ul=x[,2],
+                            x.range=x.range,nclass=nclass)
+        }else
             stop("'x' must have two columns")
-        ##xb <- hist(x[,1],plot=FALSE)
-        ##xb <- binning(xb)
-        xb <- .mybinPRO(ll=x[,1],ul=x[,2],
-                        x.range=x.range,nclass=nclass)
     }else if(inherits(x,'histogram')){
         xb <- binning(x)
     }else if(inherits(x,'bdata')){
         xb <- x
+        x0 <- xb$freq
+        xbrk <- xb$breaks
+        sele <- x0 == 0
+        if(any(sele)){
+            xb$freq <- x0[-which(sele)]
+            xb$breaks <- xbrk[-(which(sele)+1)]
+        }
+        
+        x.fit <- .fit.FSD1(xb,dist=dist)
+        y.fit <- NULL
+        x0 <- x.fit$x
+        sele <- is.finite(x0)
+        x0 <- x0[sele]
+        y0 <- x.fit$y[sele]
+        z0 <- NULL
+        out <- structure(
+            list(x.fit=x.fit,
+                 y.fit = y.fit,
+                 Psi = NULL,
+                 Psi.rng = NULL,
+                 x=x0,y=y0,z=z0),
+            class="FSD")
     }else{
-        if(length(x)<10) stop("too few data points")
-        xt <- table(x)
-        if(length(xt)<3) stop("too few distinct data values")
-        xb <- hist(x,plot=FALSE)
-        xb <- binning(xb)
+        if(length(x)<10){
+            warning("too few data points")
+            out <- NULL
+        }else{
+            xt <- table(x)
+            if(length(xt)<3){
+                warning("too few distinct data values")
+                out <- NULL
+            }else{
+                xb <- hist(x,plot=FALSE)
+                xb <- binning(xb)
+                x0 <- xb$freq
+                xbrk <- xb$breaks
+                sele <- x0 == 0
+                if(any(sele)){
+                    xb$freq <- x0[-which(sele)]
+                    xb$breaks <- xbrk[-(which(sele)+1)]
+                }
+                
+                x.fit <- .fit.FSD1(xb,dist=dist)
+                y.fit <- NULL
+                x0 <- x.fit$x
+                sele <- is.finite(x0)
+                x0 <- x0[sele]
+                y0 <- x.fit$y[sele]
+                z0 <- NULL
+                out <- structure(
+                    list(x.fit=x.fit,
+                         y.fit = y.fit,
+                         Psi = NULL,
+                         Psi.rng = NULL,
+                         x=x0,y=y0,z=z0),
+                    class="FSD")
+            }
+        }
     }
-
-    x0 <- xb$freq
-    xbrk <- xb$breaks
-    sele <- x0 == 0
-    if(any(sele)){
-        xb$freq <- x0[-which(sele)]
-        xb$breaks <- xbrk[-(which(sele)+1)]
-    }
-    
-    x.fit <- .fit.FSD1(xb,dist=dist)
-    y.fit <- NULL
-    x0 <- x.fit$x
-    sele <- is.finite(x0)
-    x0 <- x0[sele]
-    y0 <- x.fit$y[sele]
-    z0 <- NULL
-
-    out <- structure(
-        list(x.fit=x.fit,
-             y.fit = y.fit,
-             Psi = NULL,
-             Psi.rng = NULL,
-             x=x0,y=y0,z=z0),
-        class="FSD")
+    out
 }
 
 .mybinPRO <- function(ll,ul,x.range,nclass){

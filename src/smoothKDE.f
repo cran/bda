@@ -71,6 +71,7 @@ c     2013/04/01.
       end do
       do i=1, n
          f0(i) = fx(i)
+         gk(i) = 0.0
       end do
       do i=1, n
          t1 = dx*(i-1.0)/h
@@ -90,8 +91,7 @@ c     2013/04/01.
             fk(j,i) = gk(j-i)
          enddo
       enddo
-
-      fk(n,n) = gk(1)
+*      fk(n,n) = gk(1)
 
       loop = 0
       df = 1.0
@@ -196,6 +196,12 @@ c     2011/10/09.
       do 150 i=1, n
          gk(i) = twopih * exp(dx*(i-1.0)**2.0)
  150   enddo
+
+       do i=1, n
+          do j=1, n
+             fk(i,j) = 0.0
+          enddo
+       enddo
 
 
       do 250 i=1, n

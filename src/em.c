@@ -94,3 +94,39 @@ void em3(int *size, double *x, double *pars, double *tol)
   pars[6] = p[0];
   pars[7] = p[1];
 }
+
+void bin2d(double *x, double *y, int *size,
+	   double *brk1, int *nbrk1,
+	   double *brk2, int *nbrk2,
+	   double *cnt)
+{
+  int i, j, ix=0, iy=0, k=0,nk;
+  double xi,yi;
+  //initialize parameters
+  nk = (nbrk1[0]-1) * (nbrk2[0]-1);
+  for(i=0; i < nk; i++){
+    cnt[i] = 0.0;
+  }
+  
+  for(i=0; i < size[0]; i++){
+    xi = x[i];
+    yi = y[i];
+    ix = nbrk1[0] - 1;
+    for(j=1; j < nbrk1[0]; j++){
+      if(xi < brk1[j]){
+	ix = j;
+	break;
+      }
+    }
+    iy = nbrk2[0] - 1;
+    for(j=1; j < nbrk2[0]; j++){
+      if(yi < brk2[j]){
+	iy = j;
+	break;
+      }
+    }
+    k = (ix - 1)*(nbrk2[0]-1) + (iy - 1);
+    if(k >= nk) k = nk - 1;
+    cnt[k] += 1.0;
+  }
+}

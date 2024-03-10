@@ -459,3 +459,139 @@ void rootGldFmklBisection(double *q, double *lambdas)
   q[0] = r;
 }
 
+
+void bootsd(int *size, double *x, double *y, double *sx, double *sy,
+	    int *iter, double *sig, double *rho)
+{
+  int  n=size[0],i,j;
+  double xr, yr, dyx, d[n],dbar,dsum,xbar,ybar,xysum,xsum,ysum;
+
+  for(i=0; i<iter[0]; i++){
+    dsum = 0.0;
+    xsum = 0.0;
+    ysum = 0.0;
+    xbar = 0.0;
+    ybar = 0.0;
+    xysum = 0.0;
+    for(j=0; j<n; j++){
+      xr = x[j] + rnorm(0.0, sx[j]);
+      yr = y[j] + rnorm(0.0, sy[j]);
+      dyx = yr - xr;
+      d[j] = dyx;
+      dsum += dyx;
+      xbar += xr;
+      ybar += yr;
+      xsum += pow(xr,2.0);
+      ysum += pow(yr,2.0);
+      xysum += xr * yr;
+    }
+    dbar = dsum/n;
+    xbar = xbar/n;
+    ybar = ybar/n;
+    dsum = 0.0;
+    for(j=0; j<n; j++){
+      dsum += pow(d[j]-dbar,2.0);
+    }
+    rho[i] = (xysum - n*xbar*ybar)/sqrt((xsum-n*xbar*xbar)*(ysum-n*ybar*ybar));
+    sig[i] = sqrt(dsum/(n-1.0));
+  }
+}
+
+void fitdpro1(double *ll, double *ul, int *n, double *mu, double *s)
+{
+  int  i,j,k;
+  double dmu,ds,mu0,s0,mu1,s1,maxllk,llk,Fx1,Fx0,dFx;
+  dmu = mu[0] * 0.01;
+  ds = s[0] * 0.063;
+  mu0 = 0.8 * mu[0];
+  s0 = 0.9 * s[0];
+  mu1 = mu0; s1 = s0;
+
+  maxllk = -999.99;
+  for(i = 0; i < 50; i++){
+    for(j = 0; j < 50; j++){
+      llk = 0.0;
+      for(k = 0; k < n[0]; k++){
+	if(fabs(ll[k])>100){
+	  Fx0 = 0.0;
+	}else{
+	  Fx0 = pnorm(ll[k], mu0, s0, 1, 0);
+	}
+	
+	if(fabs(ll[k])>100){
+	  Fx1 = 1.0;
+	}else{
+	  Fx1 = pnorm(ul[k], mu0, s0, 1, 0);
+	}
+	
+	dFx = fabs(Fx1 - Fx0);
+	if(dFx > 0.00000001){
+	  llk += log(dFx);
+	}
+      }
+      if(llk > maxllk){
+	maxllk = llk;
+	mu1 = mu0;
+	s1 = s0;
+      }
+      s0 += ds;
+    }
+    mu0 += dmu;
+  }
+  //printf("Mean=%10.2f,SD=%10.2f\n",mu1,s1);
+  mu[0] = mu1;
+  s[0] = s1;
+}
+
+void fitdpro2(double *ll, double *ul, int *n2,
+	      double *x, int *n1,
+	      double *mu, double *s)
+{
+  int  i,j,k;
+  double dmu,ds,mu0,s0,mu1,s1,maxllk,llk,Fx1,Fx0,dFx;
+  dmu = mu[0] * 0.005;
+  ds = s[0] * 0.033;
+  mu0 = 0.8 * mu[0];
+  s0 = 0.9 * s[0];
+  mu1 = mu0; s1 = s0;
+
+  maxllk = -999.99;
+  for(i = 0; i < 100; i++){
+    for(j = 0; j < 100; j++){
+      llk = 0.0;
+      for(k = 0; k < n2[0]; k++){
+	if(fabs(ll[k])>100){
+	  Fx0 = 0.0;
+	}else{
+	  Fx0 = pnorm(ll[k], mu0, s0, 1, 0);
+	}
+	
+	if(fabs(ll[k])>100){
+	  Fx1 = 1.0;
+	}else{
+	  Fx1 = pnorm(ul[k], mu0, s0, 1, 0);
+	}
+
+	dFx = fabs(Fx1 - Fx0);
+	if(dFx > 0.00000001){
+	  llk += log(dFx);
+	}
+      }
+      for(k = 0; k < n1[0]; k++){
+	Fx0 = dnorm(x[k], mu0, s0, 0);
+	if(Fx0 > 0.00000001){
+	  llk += log(Fx0);
+	}
+      }
+      if(llk > maxllk){
+	maxllk = llk;
+	mu1 = mu0;
+	s1 = s0;
+      }
+      s0 += ds;
+    }
+    mu0 += dmu;
+  }
+  mu[0] = mu1;
+  s[0] = s1;
+}

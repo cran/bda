@@ -34,8 +34,8 @@ binning.default <- function(x, counts, breaks, lower.limit, upper.limit)
         if(missing(counts))
             stop("'x' and 'counts' cannot be both missing")        
         n <- length(counts)
-        if(any(counts <= 0))
-            stop("zeros and negative counts not allowed")
+        if(any(counts < 0))
+            stop("negative counts not allowed")
         icounts <- round(counts)
         if(any(icounts != counts))
             stop("'counts' must be integers")
@@ -124,29 +124,110 @@ binning.default <- function(x, counts, breaks, lower.limit, upper.limit)
             class="bdata")
         
     }else{
-        sele <- is.na(x)
-        if(any(sele)){
-            if(mean(sele)==1)
-                stop("all values are missing")
-            x <- x[!sele]
-        }
-        sele <- !is.finite(x)
-        if(any(sele)){
-            if(mean(sele)==1)
-                stop("all values are infinite")
-            x <- x[!sele]
-        }
-        if(missing(breaks)){
-            res <- hist(x, plot=FALSE)
+        if(inherits(x,"matrix")){
+            if(nrow(x) == 2){
+                x <- t(x)
+            }
+            if(ncol(x) == 2){
+                n.na <- apply(is.na(x),1,sum)
+                if(any(n.na > 0)){
+                    x <- x[n.na == 0,]
+                    if(nrow(x) < 10)
+                        stop("too few data points")
+                }
+                out <- .bin2d(x,breaks=breaks)
+            }else{
+                out <- NULL
+            }
         }else{
-            res <- hist(x, breaks=breaks, plot=FALSE)
+            sele <- is.na(x)
+            if(any(sele)){
+                if(mean(sele)==1)
+                    stop("all values are missing")
+                x <- x[!sele]
+            }
+            sele <- !is.finite(x)
+            if(any(sele)){
+                if(mean(sele)==1)
+                    stop("all values are infinite")
+                x <- x[!sele]
+            }
+            if(missing(breaks)){
+                res <- hist(x, plot=FALSE)
+            }else{
+                res <- hist(x, breaks=breaks, plot=FALSE)
+            }
+            out <- binning(res)
         }
-        out <- binning(res)
     }
     out
 }
 
+.bin2d <- function(x,breaks){
+    ## 'x' has been checked previously
+    ## 'breaks' needs to be checked
+    if(missing(breaks)){
+        xh1 <- binning(x[,1])
+        xh2 <- binning(x[,2])
+        brks <- list(x=xh1$breaks,y=xh2$breaks)
+    }else{
+        if(is.null(breaks$x)){
+            xh1 <- binning(x[,1])
+            if(is.null(breaks$y)){
+                xh2 <- binning(x[,2])
+                brks <- list(x=xh1$breaks,y=xh2$breaks)
+            }else{
+                if(any(diff(breaks$y)<=0))
+                    stop("invalid value(s) in 'breaks' for y-variable")
+                if(min(breaks$y) > min(x[,2]))
+                    stop("invalid value(s) in 'breaks' for y-variable")
+                if(max(breaks$y) < max(x[,2]))
+                    stop("invalid value(s) in 'breaks' for y-variable")
+                brks <- list(x=xh1$breaks,y=breaks$y)
+            }
+        }else{
+            if(any(diff(breaks$x)<=0))
+                    stop("invalid value(s) in 'breaks' for x-variable")
+            if(min(breaks$x) > min(x[,1]))
+                stop("invalid value(s) in 'breaks' for x-variable")
+            if(max(breaks$x) < max(x[,1]))
+                stop("invalid value(s) in 'breaks' for x-variable")
+            if(is.null(breaks$y)){
+                xh2 <- binning(x[,2])
+                brks <- list(x=breaks$x,y=xh2$breaks)
+            }else{
+                if(any(diff(breaks$y)<=0))
+                    stop("invalid value(s) in 'breaks' for y-variable")
+                if(min(breaks$y) > min(x[,2]))
+                    stop("invalid value(s) in 'breaks' for y-variable")
+                if(max(breaks$y) < max(x[,2]))
+                    stop("invalid value(s) in 'breaks' for y-variable")
+                brks <- list(x=breaks$x,y=breaks$y)
+            }
+        }
+    }
+    ## find a 2-d matrix xy using 'x'[nx2] and 'breaks'
+    xy <- .counts2d(x,breaks=brks)
+    list(xy=xy,breaks=brks)
+}
 
+.counts2d <- function(x, breaks){
+    nx <- nrow(x)
+    x1 <- x[,1]; x2 <- x[,2]
+    x1brk <- breaks$x; nbrk1 <- length(x1brk)
+    x2brk <- breaks$y; nbrk2 <- length(x2brk)
+    counts <- rep(0, (nbrk1-1)*(nbrk2-1))
+    res <- .Fortran(.F_bin2d,
+                    as.double(x1),
+                    as.double(x2),
+                    as.integer(nx),
+                    as.double(x1brk),
+                    as.integer(nbrk1),
+                    as.double(x2brk),
+                    as.integer(nbrk2),
+                    xy=as.double(counts))
+    xy <- matrix(res$xy, ncol=(nbrk1-1),nrow=(nbrk2-1))
+}
 print.bdata <- function(x,...){
     out <- data.frame(Frequency=x$freq)
     rnames <- paste(x$ll," < x <= ",x$ul,sep='')

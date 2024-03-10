@@ -9,6 +9,15 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
+// fitdist.c
+void bootsd(int *size,double *x,double *y,double *sx,double *sy,
+	    int *m, double *sig, double *rho);
+void fitdpro1(double *ll,double *ul, int *n,
+	      double *mu,double *s);
+void fitdpro2(double *ll,double *ul, int *n1,
+	      double *x, int *n2,
+	      double *mu,double *s);
+
 // npr.c
 void awlprNorm(double *X0, int *n0,
 	     double *X, double *Y, double *W, int *size, 
@@ -121,6 +130,9 @@ void permtest3(double *xy, int *nx, int *ny, double *pv, int *iter);
 
 // em.c
 void em3(int *size, double *x, double *pars, double *tol);
+void bin2d(double *x, double *y, int *n, double *brk1, int *nb1,
+	   double brk2, int *nb2, double *cnt);
+
 
 //lognormal.c
 
@@ -198,6 +210,7 @@ static const R_FortranMethodDef FortEntries[] = {
   {"KSPvalue", (DL_FUNC) & KSPvalue, 1},
   {"KSP2x", (DL_FUNC) & KSP2x, 2},
   {"pks2", (DL_FUNC) & pks2, 3},
+  {"bin2d", (DL_FUNC) & bin2d, 8},
 
   {"BDMLE", (DL_FUNC) & BDMLE, 7},
   {"bdregmle", (DL_FUNC) & bdregmle, 7},
@@ -253,6 +266,9 @@ static const R_FortranMethodDef FortEntries[] = {
 
   {"wnpr", (DL_FUNC) & wnpr, 8},
   {"wdekde", (DL_FUNC) & wdekde, 7},
+  {"bootsd", (DL_FUNC) & bootsd, 8},
+  {"fitdpro1", (DL_FUNC) & fitdpro1, 5},
+  {"fitdpro2", (DL_FUNC) & fitdpro2, 7},
 
   {"DkNpReg", (DL_FUNC) & DkNpReg, 9},
   {"NWReg", (DL_FUNC) & NWReg, 9},
