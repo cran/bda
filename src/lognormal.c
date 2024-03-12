@@ -1011,3 +1011,1135 @@ void lnormMixNM(double *x, double *F, int *size,
     sigs[i] = opar[i+m];
   }
 }
+
+
+/*
+ *
+ *  This program is free software; you can redistribute it and/or
+ *  modify it under the terms of the GNU General Public License as
+ *  published by the Free Software Foundation (a copy of the GNU
+ *  General Public License is available at
+ *  http://www.r-project.org/Licenses/
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ */
+
+/*
+ * Grid.Binning is designed to redistributed the weight along a
+ * defined grid.
+ *
+ *  ngrid is the number of grid points, which equals to the bin number
+ *  plus one.
+ *
+ *  Last updated: Nov 2, 2012
+ */
+void GridBinning(double *x, double *w, int *nx,
+		 double *xlo, double *bw, int *ngrid,
+		 int *truncate, int *linbin, double *gcounts)
+{
+  int i, li, m=ngrid[0], n=nx[0];
+  double binwidth = bw[0], lxi, rem, a=xlo[0];
+  
+  for(i=0; i<m; i++) gcounts[i] = 0.0;
+  
+  for(i=0; i<n; i++){
+    lxi = (x[i] - a)/binwidth;
+    li = (int) lxi;
+    if(linbin[0] == 1)
+      rem = lxi - li;
+    else
+      rem = 0.0;
+
+    if((li>0) && (li<m-1)){
+      gcounts[li] += (1.0-rem) * w[i];
+      gcounts[li+1] += rem * w[i];
+    }
+    
+    if((li<=0)&&(truncate==0))
+      gcounts[0] += w[i];
+    if((li>=m-1)&&(truncate==0)&&(linbin[0] == 1))
+      gcounts[m-1] += w[i];
+    if((li>=m-1)&&(truncate==0)&&(linbin[0] == 0))
+      gcounts[m-2] += w[i];
+  }
+}
+
+static double rcllkweibull(int npar, double *pars, void *ex)
+// to be called by the Nelder-Mead simplex method
+{
+
+  double *tmp= (double*)ex, res=0.0;
+  int i,n = (int)tmp[0]; //first element is the length of x;
+  double kappa = pars[0], lambda= pars[1]; 
+  double x[n], w[n];
+  
+  for(i=0;i<n;i++) {//restore auxiliary information from ex;
+    x[i] = tmp[i+1]; 
+    w[i] = tmp[i+n+1]; 
+  }
+  
+  for(i=0;i<n;i++) {
+    res += w[i]*(log(kappa) + (kappa-1.0)*log(x[i]) - kappa*log(lambda))
+      -  pow(x[i]/lambda, kappa);
+  }
+  
+  return(-res);
+}
+
+void RcMleWeibull(double *x,double *w,int *size,double *pars)
+{
+  int i,nx=size[0],npar=2;
+  double dpar[npar],opar[npar]; 
+  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
+  double abstol=0.00000000001,reltol=0.0000000000001,val;
+  int ifail=0,trace=0, maxit=1000, fncount;
+  double alpha=1.0, beta=0.5, gamma=2;
+  double yaux[2*nx+1];
+  yaux[0] = nx; //sample size
+  for(i=0;i<nx;i++){
+    yaux[i+1] = x[i];
+    yaux[i+nx+1] = w[i];
+  }
+  nmmin(npar,dpar,opar,&val,rcllkweibull,&ifail,abstol,reltol, 
+	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
+  pars[0] = opar[0]; pars[1] = opar[1];
+}
+
+/*  
+ * product limit estimate for data with right censoring
+ * Call: rcple(x,y,n[0],...);
+ *
+ */
+void myrcple(double x[], double w[], int n, double y[], double h[], int m) 
+{
+  int i,j;
+  double xprod=1.0;
+  for(i=0;i<m;i++){
+    h[i] = 1.0; 
+  }
+  i = 0; j = 0;
+  while(j < m){
+    if(y[j] <= x[i]){
+      h[j] = xprod;
+      j++;
+    }else{
+      i++;
+      if(i < n)
+	xprod *= pow((n-i)/(n-i+1.0), 1.0-w[i]);
+      else xprod = 0.0;
+    }
+  }
+}
+
+
+
+void wkdemae(double *x,double *w,int *size,double *y,int *ny)
+{
+  int i, j, n=size[0], m=ny[0];
+  double lambda=0.0,delta=0.0;
+  double Hx[m], HX[n], hx[m], x0;
+  for(i=0; i<n;i++){
+    lambda += x[i];
+    delta  += w[i];
+  }
+  lambda /= delta; //mle of lambda
+  myrcple(x,w,n,y,Hx,m);
+  myrcple(x,w,n,x,HX,n);
+  double t1,t2;
+  t1 = 0.7644174 * lambda * pow(n,-.2);
+  t2 = 0.2/lambda;
+
+  for(i=0; i<m;i++){
+    hx[i] = t1 * exp(t2) * pow(Hx[i],-.2);
+  }
+
+  for(i=0; i<m;i++){
+    x0 = y[i]; y[i] = 0.0; // reuse y[]
+    for(j=0; j<n; j++){
+      t1 = (x0 - x[j])/hx[i];
+      y[i] += w[j]/(HX[j]*hx[i])*dnorm(t1,0.,1.0,0);
+    }
+  }
+  
+  for(i=0; i<m;i++){
+    y[i] /= n;
+  }
+
+}
+
+
+void BDMLE(double *f,double *a,double *b,int *nbin,
+	   double *pars, int *npars, int *dist)
+{
+  int i,nx=nbin[0],npar=2; //2-parameter distribution only
+  double dpar[npar],opar[npar]; 
+  dpar[0] = pars[0]; dpar[1] = pars[1]; //initial values
+  double abstol=0.00000000001,reltol=0.0000000000001,val;
+  int ifail=0,trace=0, maxit=1000, fncount;
+  double alpha=1.0, beta=0.5, gamma=2;
+  double yaux[3*nx+1];
+  yaux[0] = nx; //sample size
+  for(i=0;i<nx;i++){
+    yaux[i+1] = f[i];
+    yaux[i+nx+1] = a[i];
+    yaux[i+2*nx+1] = b[i];
+  }
+
+  if(dist[0]==0) npars[0] = 2;  //reserved for later
+
+  nmmin(npar,dpar,opar,&val,rcllkweibull,&ifail,abstol,reltol, 
+	(void *)yaux,alpha,beta,gamma,trace,&fncount,maxit);
+  pars[0] = opar[0]; pars[1] = opar[1];
+}
+
+double bllkWeibull(double x[], double counts[], double kappa, 
+		   double lambda, double alpha, int n, int nu)
+{
+  int i;
+  double res=0.0, tmp=0.0;
+  tmp = counts[0] * pow(1.0 - exp(-pow(x[0]/lambda,kappa)), alpha);
+  if(tmp>0){
+    res = log(tmp);
+  }
+
+  for(i=1;i<n; i++){
+    tmp = counts[i] * (pow(1.0-exp(-pow(x[i]/lambda,kappa)),alpha) - 
+		       pow(1.0-exp(-pow(x[i-1]/lambda,kappa)), alpha));
+    if(tmp>0){
+      res += log(tmp);
+    }
+  }
+  tmp = nu * (1.0 - pow(1.0 - exp(-pow(x[0]/lambda,kappa)), alpha));
+  if(tmp>0){
+    res += log(tmp);
+  }
+
+  return(res);
+}
+
+double bllkDagum(double x[], double counts[], double kappa, 
+		 double lambda, double alpha, int n, int nu)
+{
+  int i;
+  double res=0.0, tmp=0.0;
+  tmp = counts[0] * pow(1.0 + pow(x[0]/lambda,-kappa), -alpha);
+  if(tmp>0.){
+    res = log(tmp);
+  }
+
+  for(i=1;i<n; i++){
+    tmp = counts[i] * (pow(1.0 + pow(x[i]/lambda,-kappa), -alpha) - 
+		       pow(1.0 + pow(x[i-1]/lambda,-kappa), -alpha));
+    if(tmp>0.){
+      res += log(tmp);
+    }
+  }
+  tmp = nu * (1.0 - pow(1.0 + pow(x[n-1]/lambda,-kappa), -alpha));
+  if(tmp>0.){
+    res += log(tmp);
+  }
+  return(res);
+}
+
+void bdrWeibull(double F[], double X[], double counts[], int n, int nu, double pars[]) 
+{
+  int i,j;
+  double y[n], x[n],xbar,ybar,ssxy, ssxx, tmp, llk=0.0,alpha;
+  alpha = pars[2];  //passed to here: cannot be zero or negative.
+  xbar = 0.0;
+  ybar = 0.0;
+  for(i=0; i<n; i++){
+    y[i] = log(-log(1.0-exp(log(F[i])/alpha)));
+    x[i] = log(X[i]);
+    xbar += x[i];
+    ybar += y[i];
+  }
+  xbar /= n;
+  ybar /= n;
+
+  ssxy = 0.0; ssxx = 0.0;
+  for(i=0; i<n; i++){
+    tmp = x[i]-xbar;
+    ssxy += tmp * (y[i]-ybar);
+    ssxx += tmp * tmp;
+  }
+  tmp = ssxy/ssxx;
+  pars[0] = tmp;
+  pars[1] =  exp(xbar - ybar/tmp);
+
+  llk = bllkWeibull(X, counts, pars[0], pars[1], alpha, n,nu);
+  pars[2] = llk;
+
+  double lstep, kstep,lambda0,kappa0;
+  lstep = 0.01 * pars[1];
+  kstep = 0.01 * pars[0];
+  lambda0 = 0.8 * pars[1];
+  kappa0 = 0.8 * pars[0];
+  for(i=0; i<50; i++){
+    for(j=0;j<50;j++){
+      tmp = bllkWeibull(X, counts, kappa0, lambda0,alpha, n,nu);
+      if(tmp > pars[2]){
+	pars[0] = kappa0;
+	pars[1] = lambda0;
+	pars[2] = tmp;
+      }
+      kappa0 += kstep;
+    }
+    lambda0 += lstep;
+  }
+}
+
+
+void bdrDagum(double F[], double X[], double counts[], int n, int nu, double pars[]) 
+{
+  int i,j;
+  double a,b;
+  double y[n], x[n],xbar,ybar,ssxy, ssxx, tmp, llk=0.0,alpha;
+  alpha = pars[2];  //passed to here: cannot be zero or negative.
+  xbar = 0.0;
+  ybar = 0.0;
+  for(i=0; i<n; i++){
+    y[i] = log(exp(-log(F[i])/alpha)-1.0);
+    x[i] = log(X[i]);
+    xbar += x[i];
+    ybar += y[i];
+  }
+  xbar /= n;
+  ybar /= n;
+
+  ssxy = 0.0; ssxx = 0.0;
+  for(i=0; i<n; i++){
+    tmp = x[i]-xbar;
+    ssxy += tmp * (y[i]-ybar);
+    ssxx += tmp * tmp;
+  }
+  b = ssxy/ssxx; a = ybar - b * xbar;
+  pars[0] = -b;  //parameter: a
+  pars[1] =  exp(-a/b); //parameter: b
+
+  llk = bllkDagum(X, counts, pars[0], pars[1],alpha,n,nu);
+  pars[2] = llk;
+
+  double lstep, kstep,lambda0,kappa0;
+  lstep = 0.01 * pars[1];
+  kstep = 0.01 * pars[0];
+  lambda0 = 0.8 * pars[1];
+  kappa0 = 0.8 * pars[0];
+  for(i=0; i<40; i++){
+    for(j=0;j<40;j++){
+      tmp = bllkWeibull(X, counts, kappa0, lambda0,alpha,n,nu);
+      if(tmp > pars[2]){
+	pars[0] = kappa0;
+	pars[1] = lambda0;
+	pars[2] = tmp;
+      }
+      kappa0 += kstep;
+    }
+    lambda0 += lstep;
+  }
+}
+
+void bdregmle(double *F, double *x, double *counts,
+	      int *nusize, int *size, int *dist, double *pars)
+{
+  int i,n=size[0], nu = nusize[0];
+  double llk,lambda=0.0, kappa=0.0,alpha=0.0,tmp;
+
+  switch(dist[0]){
+  case 1: //EWD
+    alpha = 1.;
+    pars[2] = alpha;
+    bdrWeibull(F, x, counts, n, nu, pars);
+    llk = pars[2];
+    tmp = 0.5;
+    for(i=0; i<40;i++){
+      tmp += 0.02;
+      pars[2] = tmp;
+      bdrWeibull(F, x, counts, n, nu, pars);
+      if(pars[2] > llk && R_FINITE(pars[2])){
+	llk = pars[2];
+	alpha = tmp;
+	kappa = pars[0];
+	lambda = pars[1];
+      }
+    }
+    pars[0] = kappa;
+    pars[1] = lambda;
+    pars[2] = alpha;
+    break;
+  case 2: //Dagum
+    alpha = 0.0001;
+    pars[2] = alpha;
+    bdrDagum(F, x, counts, n, nu, pars);
+    llk = pars[2];
+    tmp = alpha;
+    for(i=0; i<1000;i++){
+      if(tmp < 1.5){
+	tmp += 0.002;
+      }else{
+	tmp += 0.1;
+      }
+      pars[2] = tmp;
+      bdrDagum(F, x, counts, n, nu, pars);
+      if(pars[2] > llk && R_FINITE(pars[2])){
+	llk = pars[2];
+	alpha = tmp;
+	kappa = pars[0];
+	lambda = pars[1];
+      }
+    }
+    pars[0] = kappa;
+    pars[1] = lambda;
+    pars[2] = alpha;
+    break;
+  default:
+    pars[2] = 1.0;
+    bdrWeibull(F, x, counts, n, nu, pars);
+  }
+}
+
+double qGldFmkl(double u, double lambdas[])
+{
+  double l1=lambdas[0],l2=lambdas[1],l3=lambdas[2],l4=lambdas[3];
+  return(l1+((pow(u,l3)-1.)/l3-(pow(1.-u,l4)-1.)/l4)/l2);
+}
+
+double gRootGldFmkl(double u, double lambdas[], double q)
+{
+  return(qGldFmkl(u, lambdas) - q);
+}
+
+void rootGldFmklBisection(double *q, double *lambdas)
+{
+  int  iter=100, ctr=1;
+  double delta=0.5, tol=1.e-8;
+  double l1=0.0, l2=1.0, r=0.0, f1, f2, f3;
+  if(!isfinite(q[0])){
+    if(q[0]>0.)
+      r = 0.0;
+    else
+      r = 1.0;
+  }else{
+    f1 = gRootGldFmkl(l1,lambdas,q[0]);
+    f2 = gRootGldFmkl(l2,lambdas,q[0]);
+    f3 = f2; 
+    if(f1 == 0.0)
+      r = l1;
+    else if(f2 == 0.0)
+      r = l2;
+    else if(f1 * f2 > 0.0){
+      if(f1 > 0.0)
+	r = 0;
+      else
+	r = 1;
+    }else{
+      while(ctr <= iter && fabs(delta) > tol){
+	r = 0.5 * (l1 + l2);
+	f3 = gRootGldFmkl(r,lambdas,q[0]);
+	delta = f2 - f3;
+	if(f3 == 0) break;
+	if(f1 * f3 < 0.0){
+	  l2 = r;
+	  f2 = f3;
+	}
+	else{
+	  l1 = r;
+	  f1 = f3;
+	}
+	ctr++;
+      }
+    }
+  }
+  q[0] = r;
+}
+
+
+void bootsd(int *size, double *x, double *y, double *sx, double *sy,
+	    int *iter, double *sig, double *rho)
+{
+  int  n=size[0],i,j;
+  double xr, yr, dyx, d[n],dbar,dsum,xbar,ybar,xysum,xsum,ysum;
+
+  for(i=0; i<iter[0]; i++){
+    dsum = 0.0;
+    xsum = 0.0;
+    ysum = 0.0;
+    xbar = 0.0;
+    ybar = 0.0;
+    xysum = 0.0;
+    for(j=0; j<n; j++){
+      xr = x[j] + rnorm(0.0, sx[j]);
+      yr = y[j] + rnorm(0.0, sy[j]);
+      dyx = yr - xr;
+      d[j] = dyx;
+      dsum += dyx;
+      xbar += xr;
+      ybar += yr;
+      xsum += pow(xr,2.0);
+      ysum += pow(yr,2.0);
+      xysum += xr * yr;
+    }
+    dbar = dsum/n;
+    xbar = xbar/n;
+    ybar = ybar/n;
+    dsum = 0.0;
+    for(j=0; j<n; j++){
+      dsum += pow(d[j]-dbar,2.0);
+    }
+    rho[i] = (xysum - n*xbar*ybar)/sqrt((xsum-n*xbar*xbar)*(ysum-n*ybar*ybar));
+    sig[i] = sqrt(dsum/(n-1.0));
+  }
+}
+
+void fitdpro1(double *ll, double *ul, int *n, double *mu, double *s)
+{
+  int  i,j,k;
+  double dmu,ds,mu0,s0,mu1,s1,maxllk,llk,Fx1,Fx0,dFx;
+  dmu = mu[0] * 0.01;
+  ds = s[0] * 0.063;
+  mu0 = 0.8 * mu[0];
+  s0 = 0.9 * s[0];
+  mu1 = mu0; s1 = s0;
+
+  maxllk = -999.99;
+  for(i = 0; i < 50; i++){
+    for(j = 0; j < 50; j++){
+      llk = 0.0;
+      for(k = 0; k < n[0]; k++){
+	if(fabs(ll[k])>100){
+	  Fx0 = 0.0;
+	}else{
+	  Fx0 = pnorm(ll[k], mu0, s0, 1, 0);
+	}
+	
+	if(fabs(ll[k])>100){
+	  Fx1 = 1.0;
+	}else{
+	  Fx1 = pnorm(ul[k], mu0, s0, 1, 0);
+	}
+	
+	dFx = fabs(Fx1 - Fx0);
+	if(dFx > 0.00000001){
+	  llk += log(dFx);
+	}
+      }
+      if(llk > maxllk){
+	maxllk = llk;
+	mu1 = mu0;
+	s1 = s0;
+      }
+      s0 += ds;
+    }
+    mu0 += dmu;
+  }
+  //printf("Mean=%10.2f,SD=%10.2f\n",mu1,s1);
+  mu[0] = mu1;
+  s[0] = s1;
+}
+
+void fitdpro2(double *ll, double *ul, int *n2,
+	      double *x, int *n1,
+	      double *mu, double *s)
+{
+  int  i,j,k;
+  double dmu,ds,mu0,s0,mu1,s1,maxllk,llk,Fx1,Fx0,dFx;
+  dmu = mu[0] * 0.005;
+  ds = s[0] * 0.033;
+  mu0 = 0.8 * mu[0];
+  s0 = 0.9 * s[0];
+  mu1 = mu0; s1 = s0;
+
+  maxllk = -999.99;
+  for(i = 0; i < 100; i++){
+    for(j = 0; j < 100; j++){
+      llk = 0.0;
+      for(k = 0; k < n2[0]; k++){
+	if(fabs(ll[k])>100){
+	  Fx0 = 0.0;
+	}else{
+	  Fx0 = pnorm(ll[k], mu0, s0, 1, 0);
+	}
+	
+	if(fabs(ll[k])>100){
+	  Fx1 = 1.0;
+	}else{
+	  Fx1 = pnorm(ul[k], mu0, s0, 1, 0);
+	}
+
+	dFx = fabs(Fx1 - Fx0);
+	if(dFx > 0.00000001){
+	  llk += log(dFx);
+	}
+      }
+      for(k = 0; k < n1[0]; k++){
+	Fx0 = dnorm(x[k], mu0, s0, 0);
+	if(Fx0 > 0.00000001){
+	  llk += log(Fx0);
+	}
+      }
+      if(llk > maxllk){
+	maxllk = llk;
+	mu1 = mu0;
+	s1 = s0;
+      }
+      s0 += ds;
+    }
+    mu0 += dmu;
+  }
+  mu[0] = mu1;
+  s[0] = s1;
+}
+
+
+void KSPvalue(double *x0){
+  double ksp=0., t=x0[0];
+  int i;
+  for(i=1;i<100;i++){
+    ksp += exp(-2.*pow(i*t,2.));
+    i++;
+    ksp -= exp(-2.*pow(i*t,2.));
+  }
+  x0[0] = 2.*ksp;
+}
+
+
+void pks2(double *x, int *size1, int *size2){
+  double md, nd, q, *u, w;
+  int i, j, m=size1[0], n=size2[0];
+  if(m > n) {
+    i = n; n = m; m = i;
+  }
+  md = (double) m;
+  nd = (double) n;
+  q = (0.5 + floor(*x * md * nd - 1e-7)) / (md * nd);
+  u = (double *) R_alloc(n + 1, sizeof(double));
+  for(j = 0; j <= n; j++) {
+    u[j] = ((j / nd) > q) ? 0 : 1;
+  }
+  for(i = 1; i <= m; i++) {
+      w = (double)(i) / ((double)(i + n));
+      if((i / md) > q)
+	u[0] = 0;
+      else
+	u[0] = w * u[0];
+      for(j = 1; j <= n; j++) {
+	if(fabs(i / md - j / nd) > q) 
+	  u[j] = 0;
+	else
+	  u[j] = w * u[j] + u[j - 1];
+      }
+  }
+  x[0] = fabs(1.0 - u[n]);
+}
+
+
+
+void KSP2x(double *D, int *size){
+  /* copied from R ks.c file */
+  
+  /* Compute Kolmogorov's distribution.
+     Code published in
+     George Marsaglia and Wai Wan Tsang and Jingbo Wang (2003),
+     "Evaluating Kolmogorov's distribution".
+     Journal of Statistical Software, Volume 8, 2003, Issue 18.
+     URL: http://www.jstatsoft.org/v08/i18/.
+  */
+
+  int n=size[0];
+  double d=D[0];
+  
+  double p=0.0, s;
+   
+  /* 
+     The faster right-tail approximation.
+  */
+  s = d*d*n; 
+  if(s > 7.24 || (s > 3.76 && n > 99)){ 
+    p = 1-2*exp(-(2.000071+.331/sqrt(n)+1.409/n)*s);
+  }
+  D[0] = p;
+}
+
+
+void qmPareto(double *p, double *q, int *npar,
+	      double *xm, double *alpha)
+{
+  int i,j,n=npar[0], k;
+
+  k = 0;
+  for(i=0; i<n-1; i++){
+    for(j=i+1; j<n; j++){
+      alpha[k] = log((1.0-p[i])/(1.0-p[j]))/log(q[j]/q[i]);
+      //Rprintf("\nalpha=%f, ",alpha[k]);
+      if(alpha[k] <= 0.0){
+	xm[k] = -99.;
+      }else{
+	xm[k] = pow(1.0-p[i], 1.0/alpha[k]) * q[i];
+      }
+      //Rprintf("\nxm=%f",xm[k]);
+      k++;
+    }
+  }
+}
+
+double binParetoLLK(double f[], double b[], int n,
+		    double xm, double a){
+  int i;
+  double p,q, llk=0.0;
+
+  p = 1.0 - pow(xm/b[0], a);
+  if(p>0.0){
+    llk += log(p)*f[0];
+  }else{
+    llk -= 999. * f[0];
+  }
+  for(i=1; i<n-1; i++){
+    q = 1.0 - pow(xm/b[i], a);
+    if(q > p){
+      llk += log(q - p)*f[i];
+      p = q;
+    }else{
+      llk -= 999. * f[0];
+    }
+  }
+  if(p<1.0){
+    llk += log(1.0 - p)*f[n-1];
+  }else{
+    llk -= 999. * f[0];
+  }
+
+  return llk;
+}
+
+void mle1Pareto(double *cnts, double *b, int *nclass,
+	      double *xm, double *alpha)
+{
+  int i,n=nclass[0];
+  double a=0.,s=0.,Fn[n],p=0.,q=0.;
+  double llk,LLK,mle;
+  //first find an initial value of alpha: Pareto index
+  s = 0.0;
+  for(i=0; i<n; i++){
+    s += cnts[i];
+    Fn[i] = s;
+  }
+  s = 1.0;
+  for(i=0; i<n-1; i++){
+    Fn[i] /= Fn[n-1];
+    if(fabs(Fn[i] - 0.5) < s){
+      p = Fn[i];
+      q = b[i];
+      s = fabs(Fn[i] - 0.5);
+    }
+  }
+  a = log(1.0-p)/log(xm[0]/q);
+  s = 0.05*a; //increment over [a/10, 10a]
+  a = s; mle = a;
+  LLK = binParetoLLK(cnts,b,n,xm[0],a);
+
+  for(i=0; i<100; i++){
+    a += s;
+    llk = binParetoLLK(cnts,b,n,xm[0],a);
+    if(llk > LLK){
+      LLK = llk;
+      mle = a;
+    }
+  }
+  alpha[0] = mle;
+  xm[0] = LLK;
+}
+
+void mle2Pareto(double *cnts, double *b, int *nclass,
+	      double *xm, double *alpha)
+{
+  int i,j,n=nclass[0];
+  double a=0.,s=0.,Fn[n],p=0.,q=0.,xm1;
+  double llk,LLK,mle1,mle2;
+  //first find an initial value of alpha: Pareto index
+  s = 0.0;
+  for(i=0; i<n; i++){
+    s += cnts[i];
+    Fn[i] = s;
+  }
+  s = 1.0;
+  for(i=0; i<n-1; i++){
+    Fn[i] /= Fn[n-1];
+    if(fabs(Fn[i] - 0.5) < s){
+      p = Fn[i];
+      q = b[i];
+      s = fabs(Fn[i] - 0.5);
+    }
+  }
+
+  xm1 = xm[0]; mle2 = xm1;
+  a = log(1.0-p)/log(xm1/q);
+  a = s; mle1 = a;  
+  LLK = binParetoLLK(cnts,b,n,xm1,a);
+
+  s = 0.05*a; 
+  for(j=0; j<99; j++){
+    a = log(1.0-p)/log(xm1/q);
+    s = a*0.1; a = s; 
+    for(i=0; i<100; i++){
+      llk = binParetoLLK(cnts,b,n,xm1,a);
+      if(llk > LLK){
+	LLK = llk;
+	mle1 = a;
+	mle2 = xm1;
+      }
+      a += s;
+    }
+    xm1 += xm[0];
+  }
+  alpha[0] = mle1;
+  xm[0] = mle2;
+  b[0] = LLK;
+}
+
+
+//to compute the D=max(Fx-Fy)
+void compFnx(double X[], int n, double a, double b, int M, double Fx[])
+{
+  int i,li;
+  double delta, lxi;
+  for(i=0; i<M; i++){
+    Fx[i] = 0.0;
+  }
+  delta = (b-a)/(M-1.0);
+  for(i=0; i<n; i++){
+    lxi = (X[i]-a)/delta;
+    li = (int) floor(lxi);
+    Fx[li] = Fx[li] + 1.0;
+  }
+  lxi = 0.0;
+  for(i=0; i<M; i++){
+    lxi = lxi + Fx[i]/n;
+    Fx[i] =  lxi;
+  }
+}
+
+double compD(int nx,double x[],int ny,double y[],double a,double b,int ngrid)
+{
+  int i;
+  double Fx[ngrid], Fy[ngrid], xmax,xtmp;
+  for(i=0; i<ngrid; i++){
+    Fx[i] = 0.0;
+    Fy[i] = 0.0;
+  }
+  compFnx(x,nx,a,b,ngrid,Fx);
+  compFnx(y,ny,a,b,ngrid,Fy);
+  xmax = fabs(Fx[0]-Fy[0]);
+  for(i=1; i<ngrid; i++){
+    xtmp = fabs(Fx[i] - Fy[i]);
+    if(xtmp > xmax)
+      xmax = xtmp;
+  }
+  return(xmax);
+}
+
+
+void permtest(double *x, int *nx, double *y, int *ny, double *a,
+	      double *b, double *D, double *pv, int *iter)
+{
+  int i, j, k,l;
+  int ngrid=1001;
+  double xy1[nx[0]+ny[0]], xy2[nx[0]+ny[0]];
+  double xmin=a[0], xmax=b[0],D1=0.0;
+
+  GetRNGstate();
+  
+  //get min and max of positive values and define grid
+  for(i=0; i<nx[0]; i++){
+    xy1[i] = x[i];
+  }
+  for(i=0; i<ny[0]; i++){
+    xy1[i+nx[0]] = y[i];
+  }
+  D[0] = compD(nx[0],x,ny[0],y,xmin,xmax,ngrid);
+  pv[0] = 1.0;
+  for(i=0; i<iter[0]; i++){
+    for(j=0; j<nx[0]+ny[0]; j++){
+      xy2[j] = xy1[j];
+    }
+    //resample
+    k = nx[0] + ny[0];
+    for(j=0; j<nx[0]; j++){
+      l = (int) runif(0.0, k-1.0);
+      x[j] = xy2[l];
+      k--;
+      xy2[l] = xy2[k];
+    }
+    for(j=0; j<ny[0]; j++){
+      y[j] = xy2[j];
+    }
+    D1 = compD(nx[0],x,ny[0],y,xmin,xmax,ngrid);
+    if(D[0] <= D1){
+      pv[0] = pv[0] + 1.0;
+    }
+  }
+  pv[0] = pv[0]/(iter[0] + 1.0);
+  PutRNGstate();
+ 
+}
+
+
+
+void permtest2(double *D, int *M, int *nx, int *ny,
+	       int *F, int *iter)
+{
+  int i, j, k, l, pv=1,n=nx[0]+ny[0];
+  int x[M[0]],F2[n];
+  double Dmax,D1,D2,Dif;
+
+  GetRNGstate();
+
+  
+  for(i=0; i<iter[0]; i++){
+    //initialize F2
+    l = 0;
+    for(j=0; j<M[0]; j++){
+      for(k=0; k<F[j]; k++){
+	F2[l] = j;
+	l++;
+      }
+    }
+    //resample
+    for(j=0; j<M[0]; j++){
+      x[j] = 0;
+    }
+    k = n;
+    for(j=0; j<nx[0]; j++){
+      l = (int) runif(0.0, k-1.0);
+      //      printf("k=%d,l=%d,F2[l]=%d,x[before]=%d\n",k,l,F2[l],x[F2[l]]);
+      x[F2[l]]++;
+      //      printf("x[after]=%d\n",x[F2[l]]);
+      k--;
+      F2[l] = F2[k];
+    }
+    //Find max(|Fn(x)-Fn(y)|)
+    k = 0; l = 0;
+    Dmax = 0.0; D2 = 0.0; D1 = 0.0; Dif = 0.0;
+    for(j=0; j<M[0]; j++){
+      k += x[j];
+      l += F[j] - x[j];
+      //      printf("k=%d,l=%d,n.x=%d,n.y=%d,",k,l,nx[0],ny[0]);
+      D1 = (double) k/nx[0];
+      D2 = (double) l/ny[0];
+      Dif = fabs(D1 - D2);
+      if(Dif > Dmax) Dmax = Dif;
+      //      printf("D1=%f,D2=%f,Diff=%f,\nDmax=%f,D0=%f\n",D1, D2, Dif,Dmax,D[0]);
+    }
+    if(D[0] <= Dmax) pv++;
+    //    printf("counts=%d\n\n",pv);
+  }
+  D[0] = pv/(iter[0] + 1.0);
+  PutRNGstate();
+}
+
+
+
+void permtest3(double *xy, int *nx, int *ny,
+	       double *pv, int *iter)
+{
+  int i, j, k, l, n=nx[0]+ny[0],plt=0,pne=0,pgt=0;
+  double D=pv[0],xysum=pv[1],D1=0.0,D2,xsum,xy0[n];
+  D2 = fabs(D);
+  
+  GetRNGstate();
+  
+  for(i=0; i<iter[0]; i++){
+    //initialize the pooled values
+    for(j=0; j<n; j++){
+      xy0[j] = xy[j];
+    }
+    
+    //resampling
+    k = n-1; xsum = 0.0;
+    for(j=0; j<nx[0]; j++){
+      l = (int) runif(0.0, k);
+      xsum += xy0[l];
+      xy0[l] = xy0[k];
+      k--;
+    }
+    //Compute diff(mu1-mu2)
+    D1 = xsum/nx[0] - (xysum-xsum)/ny[0];
+    if(D > D1) plt++;
+    if(D < D1) pgt++;
+    if(D2 < fabs(D1)) pne++;
+  }
+  pv[0] = (double) plt/(iter[0] + 1.0);
+  pv[1] = (double) pne/(iter[0] + 1.0);
+  pv[2] = (double) pgt/(iter[0] + 1.0);
+  PutRNGstate();
+}
+
+
+//recursive version to compute factorial of n := n!
+int factorial(int n){
+  return n>=1 ? n * factorial(n-1) : 1;
+}
+
+double g1(double p, int m1, int n11, double a[], double alpha){
+  int i;
+  double p1=0.0, p2=0.0;
+  for(i=0;i<n11;i++)
+    p1 += a[i] * pow(p, i);
+  for(i=n11;i<m1+1;i++){
+    p1 += a[i] * pow(p, i);
+    p2 += a[i] * pow(p, i);
+  }
+  return p2/p1 - 0.5 * alpha;
+}
+
+double g2(double p, int m1, int n11, double a[], double alpha){
+  int i;
+  double p1=0.0, p2=0.0;
+  for(i=0;i<n11+1;i++){
+    p1 += a[i] * pow(p, i);
+    p2 += a[i] * pow(p, i);
+  }
+  for(i=n11+1;i<m1+1;i++){
+    p1 += a[i] * pow(p, i);
+  }
+  return p2/p1 - 0.5 * alpha;
+}
+
+double dg1(double p, int m1, int n11, double a[]){
+  int i;
+  double p1, p2=0.0, dp1=0.0, dp2=0.0;
+
+  p1 = a[0];
+  for(i=1;i<n11;i++){
+    p1 += a[i] * pow(p, i);
+    dp1 += i * a[i] * pow(p, i-1);
+  }
+  for(i=n11;i<m1+1;i++){
+    p1 += a[i] * pow(p, i);
+    dp1 += i * a[i] * pow(p, i-1);
+    p2 += a[i] * pow(p, i);
+    dp2 += i * a[i] * pow(p, i-1);
+  }
+  return (dp2 * p1 - p2 * dp1)/(p1 * p1);
+}
+
+double dg2(double p, int m1, int n11, double a[]){
+  int i;
+  double p1, p2=0.0, dp1=0.0, dp2=0.0;
+
+  p1 = a[0];
+  p2 = a[0];
+  for(i=1;i<n11+1;i++){
+    p1 += a[i] * pow(p, i);
+    dp1 += i * a[i] * pow(p, i-1);
+    dp2 += i * a[i] * pow(p, i-1);
+  }
+  for(i=n11+1;i<m1+1;i++){
+    p1 += a[i] * pow(p, i);
+    dp1 += i * a[i] * pow(p, i-1);
+  }
+  return (dp2 * p1 - p2 * dp1)/(p1 * p1);
+}
+/* use out to pass the initial value and the final estimate
+
+   The Newton method was used, fast but not stable.  We change to the
+   bisection method instead.  We take small value a = 1e-16 and b=1e6.
+   If not in the range, simply use 0 or 100000+
+ */
+
+void orexactl(int *counts, double *alpha, double *out)
+{
+  int i,n11,n12,n21,n22, n1, n2, m1;
+  n11 = counts[0];
+  n12 = counts[1];
+  n21 = counts[2];
+  n22 = counts[3];
+  n1 = n11+n12;
+  n2 = n21+n22;
+  m1 = n11+n21;
+  double delta = 1.0, p0 = out[0],f0, fa, fb,pa,pb;
+  double a[m1 + 1]; // to store the coefficients
+  
+
+  for(i=0;i < m1+1;i++)
+    a[i] = choose(n1, i) * choose(n2, m1 - i);
+  
+  i = 0;
+  pa = 1.e-16; pb = 1.e6;
+  f0 = g1(p0, m1, n11, a, alpha[0]);
+  if(f0>0.) pb = p0; else pa = p0;
+  fa = g1(pa, m1, n11, a, alpha[0]);
+  fb = g1(pb, m1, n11, a, alpha[0]);   
+
+  while(i<10000 && fabs(delta) >0.00001){
+    if(fa >=0.){
+      p0 = pa; break; //exit
+    }else if(fb<=0.){
+      p0 = pb; break;
+    }else{
+      p0 = 0.5 * (pa + pb);      
+      f0 = g1(p0, m1, n11, a, alpha[0]);
+      if(f0>0.){
+	pb = p0; 
+	fb = g1(pb, m1, n11, a, alpha[0]);   
+      }else{
+	pa = p0;
+	fa = g1(pa, m1, n11, a, alpha[0]);
+      }
+      i++;
+    }
+  }
+
+  out[0] = p0;
+}
+
+void orexactu(int *counts, double *alpha, double *out)
+{
+  int i,n11,n12,n21,n22, n1, n2, m1;
+  n11 = counts[0];
+  n12 = counts[1];
+  n21 = counts[2];
+  n22 = counts[3];
+  n1 = n11+n12;
+  n2 = n21+n22;
+  m1 = n11+n21;
+  double delta = 1.0, p0 = out[0],f0, fa, fb,pa,pb;
+  double a[m1 + 1]; // to store the coefficients
+  
+
+  for(i=0;i < m1+1;i++)
+    a[i] = choose(n1, i) * choose(n2, m1 - i);
+  
+  i = 0;
+  pa = 1.e-16; pb = 1.e6;
+  f0 = g2(p0, m1, n11, a, alpha[0]);
+  if(f0 < 0.) pb = p0; else pa = p0;
+  fa = g2(pa, m1, n11, a, alpha[0]);
+  fb = g2(pb, m1, n11, a, alpha[0]);   
+
+  while(i<10000 && fabs(delta) >0.00001){
+    if(fa <=0.){
+      p0 = pa; break; //exit
+    }else if(fb>=0.){
+      p0 = pb; break;
+    }else{
+      p0 = 0.5 * (pa + pb);      
+      f0 = g2(p0, m1, n11, a, alpha[0]);
+      if(f0<0.){
+	pb = p0; 
+	fb = g2(pb, m1, n11, a, alpha[0]);   
+      }else{
+	pa = p0;
+	fa = g2(pa, m1, n11, a, alpha[0]);
+      }
+      i++;
+    }
+  }
+  //  p0 = g2(10., m1, n11, a, alpha[0]);
+
+  out[0] = p0;
+}
+
