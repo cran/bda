@@ -17,7 +17,7 @@ void yldist(double *gcounts, int *m, double *y);
 void ofcpdf(double *y, double *f,double *a, double *b,
 	    int *ny, double *x, int *nx, double *bw);
 void remp(int *n,double *y,double *f, double *a, double *b,
-	  int *m, double *Fx, double *x, double *u, int *ntotal);
+	  int *m, double *Fx, double *x, double *u);
 
 void mlensimp(double *w, double *f,double *a, double *b,
 	      int *n, double *theta);
@@ -228,7 +228,7 @@ static const R_FortranMethodDef FortEntries[] = {
 
   {"hbmise", (DL_FUNC) & hbmise, 5},
   {"ofcpdf", (DL_FUNC) &ofcpdf, 8},
-  {"remp", (DL_FUNC) &remp, 10},
+  {"remp", (DL_FUNC) &remp, 9},
   {"mlensimp", (DL_FUNC) &mlensimp, 6},
 
   {"pKDE", (DL_FUNC) & pKDE, 6},

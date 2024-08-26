@@ -166,12 +166,13 @@ void ofcpdf(double *y, double *f, double *a, double *b,
     }
 }
 
+
 void remp(int *n2, double *y, double *f,
 	  double *a, double *b,
 	  int *n1, double *Fx, double *x,
-	  double *u, int *size) {
+	  double *u) {
 
-  int i, j, k, l, icounter,n=size[0];
+  int i, j, k, l, icounter;
   double F0, F1, y0, dy, t1;
   int ny=n2[0],nx=n1[0];
   
@@ -218,6 +219,7 @@ void remp(int *n2, double *y, double *f,
         }
     }
 }
+
 
 void mlensimp(double *w, double *f, double *a, double *b,
 	      int *size, double *theta) {

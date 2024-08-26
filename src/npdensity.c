@@ -538,7 +538,7 @@ void NormNorm1(int *n, double *Rfx,double *s2, double *h1,double *grid,double *u
   for(i=0;i<30;i++){
     h += hstep;
     hdiff = h*h-s2[0];
-    mise = 0.5/n[0]/pow(PI*hdiff,-0.5)+Rfx[0]*pow(h,4.0);
+    mise = 0.5/n[0]/pow(M_PI*hdiff,-0.5)+Rfx[0]*pow(h,4.0);
     if(mise<mmin) {
       hopt=h; mmin=mise;
     }
@@ -1086,7 +1086,7 @@ void bwBoot1(double *h0,int *size,int *type,double *y,double *sig,
     for(i=0;i<grid[0];i++){
       h += hstep;
       fint = GLInt6p(-1.0,1.0,f[0],h,g,sig,y,n);
-      mise=fint/PI;
+      mise=fint/M_PI;
       if(mise<mmin) {
 	hopt=h; mmin=mise;
       }
@@ -1096,7 +1096,7 @@ void bwBoot1(double *h0,int *size,int *type,double *y,double *sig,
     for(i=0;i<grid[0];i++){
       h += hstep;
       fint = GLInt6p(0,4.0,f[2],h,g,sig,y,n);//approximate 
-      mise=fint/PI;
+      mise=fint/M_PI;
       if(mise<mmin) {
 	hopt=h; mmin=mise;
       }
@@ -1106,7 +1106,7 @@ void bwBoot1(double *h0,int *size,int *type,double *y,double *sig,
     for(i=0;i<grid[0];i++){
       h += hstep;
       fint = GLInt6p(-1.0,1.0,f[1],h,g,sig,y,n);
-      mise=fint/PI;
+      mise=fint/M_PI;
       if(mise<mmin) {
 	hopt=h; mmin=mise;
       }
@@ -1116,7 +1116,7 @@ void bwBoot1(double *h0,int *size,int *type,double *y,double *sig,
     for(i=0;i<grid[0];i++){
       h += hstep;
       fint = GLInt6p(0,4.0,f[3],h,g,sig,y,n);//approximate 
-      mise=fint/PI;
+      mise=fint/M_PI;
       if(mise<mmin) {
 	hopt=h; mmin=mise;
       }

@@ -1,4 +1,4 @@
-3717800ea6bd69752936e49e3de61ea0 *DESCRIPTION
+a63e5dcc421734bb60447394a55d3356 *DESCRIPTION
 0cfff799e2e434dbd408e97d55e83317 *NAMESPACE
 ac3679710d88987f525e4d10ee72d95a *PORTING
 a2277e23c389410c197701ec184a57c4 *R/PROtest.R
@@ -7,7 +7,7 @@ a2277e23c389410c197701ec184a57c4 *R/PROtest.R
 18f95f05aad4cc2121c68af29cd04daa *R/Zipf.R
 42069163b38282105701cf6b7502c012 *R/binning.R
 8850201709f6158b8ba59b249e64fdcc *R/bootPRO.R
-c14a73de785167067f68851881c69b11 *R/bootkde.R
+1f3e0edebc9f9e397c5a9d3d53aabc8a *R/bootkde.R
 b28e08ea4842bb0f0ae1e8929bc09e4c *R/bootnpr.R
 a36ff0a4e2d1d3446fee948341a9ab91 *R/fitFSD.R
 3c89afe7a035ce6c3144d8c257f84ff9 *R/fitGBPD.R
@@ -56,8 +56,8 @@ be427d0a80eb687d8dc0d9a68c1b40d4 *man/fnm.Rd
 5073a49ac621306c55b04f272bede19a *man/mixnorm.Rd
 481550a1cdaedb0ecbb0e8e07eeab354 *man/wkde.Rd
 6eb2387475cc5678aa65eb12800e5181 *src/Makevars
-fbf37eafe3011aae4eb6e76e8d5e9dd1 *src/ckernel.c
-dd78fe309e24d573e4d1686547a37cba *src/init.c
+b40312d4ad6b51489310c64b5059f66a *src/ckernel.c
+45c501d94423caa8aa6224cfabbaf5f8 *src/init.c
 6fe9fbdf699f19c378955e9ae3454ca7 *src/lognormal.c
 ac9056674eee3acc8eab7fc2c0f2cdc4 *src/lpsmooth.c
-2cf40ee1dd9e5be245c486502638993c *src/npdensity.c
+d7771466214829c8b21120cea88bd8d3 *src/npdensity.c

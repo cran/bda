@@ -118,10 +118,14 @@ bootkde <- function(x,freq,a,b,from, to, gridsize=512L,
 
 .bootemp <- function(n,x,y,f,lb,ub,Fx,from,to){
     M=length(x);u=runif(n);N=length(f);
-    
+
     smpl = .Fortran(.F_remp, as.integer(N), as.double(y), as.double(f),
-        as.double(lb), as.double(ub), as.integer(M), as.double(Fx),
-        as.double(x), smpl=as.double(u), as.integer(n))$smpl
+                    as.double(lb), as.double(ub), as.integer(M), as.double(Fx),
+                    as.double(x), smpl=as.double(u))$smpl
+    
+    ##smpl = .Fortran(.F_remp, as.integer(N), as.double(y), as.double(f),
+    ##    as.double(lb), as.double(ub), as.integer(M), as.double(Fx),
+    ##    as.double(x), smpl=as.double(u), as.integer(n))$smpl
     
     density(smpl,n=M,from=from,to=to)$y
 }
