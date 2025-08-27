@@ -18,9 +18,9 @@ void ofcpdf(double *y, double *f,double *a, double *b,
 	    int *ny, double *x, int *nx, double *bw);
 void remp(int *n,double *y,double *f, double *a, double *b,
 	  int *m, double *Fx, double *x, double *u);
-
 void mlensimp(double *w, double *f,double *a, double *b,
 	      int *n, double *theta);
+void chgpt(double *x, double *y, int *n, int *k, double *res);
 
 
 // fitdist.c
@@ -255,6 +255,8 @@ static const R_FortranMethodDef FortEntries[] = {
   {"lprLap", (DL_FUNC) & lprLap, 8},
   {"wlprNorm", (DL_FUNC) & wlprNorm, 8},
   {"awlprNorm", (DL_FUNC) & awlprNorm, 7},
+
+  {"chgpt", (DL_FUNC) & chgpt, 5},
   {NULL, NULL, 0}
 };
 

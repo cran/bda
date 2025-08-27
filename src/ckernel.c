@@ -395,3 +395,94 @@ void bin2d(double *x, double *y, int *size,
     cnt[k] += 1.0;
   }
 }
+
+void chgpt(double *x, double *y, int *size, int *k, double *ans)
+{
+  /* divide the data (x,y) into two parts (1:k) and (k+1):n; fitting
+     two least square straight lines, respectively, and compute the
+     residual sum of squares (RSS). Changing k to find a split with
+     minimum RSS.
+
+     LSE for y=a+bx, b = (n*SXY - SX*SY)/(n*SXX - SX^2), a=(SY-b*SX)/n
+   */
+  int i, j,n1,n2;
+  double sx1,sy1,sxx1,sxy1,a1,b1;
+  double sx2,sy2,sxx2,sxy2,a2,b2;
+  double rss1,rss2,rssmin,rsssum;
+  
+  //initialize parameters
+  sx1  = 0.0;
+  sy1  = 0.0;
+  sxx1 = 0.0;
+  sxy1 = 0.0;
+  n1 = k[0];
+  
+  sx2  = 0.0;
+  sy2  = 0.0;
+  sxx2 = 0.0;
+  sxy2 = 0.0;
+  n2 = size[0] - n1;
+
+  for(i=0; i < n1; i++){
+    sx1 += x[i];
+    sy1 += y[i];
+    sxx1 += x[i]*x[i];
+    sxy1 += x[i]*y[i];
+  }
+  b1 = (n1*sxy1 - sx1*sy1)/(n1*sxx1-sx1*sx1);
+  a1 = (sy1-b1*sx1)/n1;
+  
+  rss1 = 0.0;
+  for(i=0; i < n1; i++){
+    rss1 += pow(y[i] - a1 - b1*x[i], 2.0);
+  }
+
+  
+  for(i=n1; i < size[0]; i++){
+    sx2 += x[i];
+    sy2 += y[i];
+    sxx2 += x[i]*x[i];
+    sxy2 += x[i]*y[i];
+  }
+  b2 = (n2*sxy2 - sx2*sy2)/(n2*sxx2-sx2*sx2);
+  a2 = (sy2-b2*sx2)/n2;
+
+  rss2 = 0.0;
+  for(i=n1; i < size[0]; i++){
+    rss2 += pow(y[i] - a2 - b2*x[i], 2.0);
+  }
+
+  rssmin = rss1 + rss2;
+  ans[0] = x[n1-1];
+
+  int nstart=n1,nend=size[0]-n1;
+  for(i=nstart; i < nend; i++){
+    n1++;
+    n2--;
+    sx1 += x[i];
+    sy1 += y[i];
+    sxx1 += x[i]*x[i];
+    sxy1 += x[i]*y[i];
+    sx2 -= x[i];
+    sy2 -= y[i];
+    sxx2 -= x[i]*x[i];
+    sxy2 -= x[i]*y[i];
+    b1 = (n1*sxy1 - sx1*sy1)/(n1*sxx1-sx1*sx1);
+    a1 = (sy1-b1*sx1)/n1;
+    rss1 = 0.0;
+    for(j=0; j < i+1; j++){
+      rss1 += pow(y[j] - a1 - b1*x[j], 2.0);
+    }
+    b2 = (n2*sxy2 - sx2*sy2)/(n2*sxx2-sx2*sx2);
+    a2 = (sy2-b2*sx2)/n2;
+    rss2 = 0.0;
+    for(j=i+1; j < size[0]; j++){
+      rss2 += pow(y[j] - a2 - b2*x[j], 2.0);
+    }
+    rsssum = rss1 + rss2;
+    if(rsssum < rssmin){
+      rssmin = rsssum;
+      ans[0] = x[n1-1];
+    }
+  }
+}

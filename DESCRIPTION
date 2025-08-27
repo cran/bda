@@ -1,6 +1,6 @@
 Package: bda
-Version: 18.3.2
-Date: 2024-08-25
+Version: 19.0.0
+Date: 2025-08-27
 Title: Binned Data Analysis
 Authors@R: person(given = "Bin",
                   family = "Wang",
@@ -13,7 +13,7 @@ Description: Algorithms developed for binned data analysis,
   measurement error models for ordinal data analysis. 
 License: Unlimited
 NeedsCompilation: yes
-Packaged: 2024-08-26 00:19:44 UTC; alkb
+Packaged: 2025-08-27 13:22:19 UTC; alkb
 Repository: CRAN
-Date/Publication: 2024-08-26 03:50:02 UTC
+Date/Publication: 2025-08-27 14:30:02 UTC
 Author: Bin Wang [aut, cre]
