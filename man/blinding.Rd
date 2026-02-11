@@ -1,30 +1,39 @@
 % This is a template R document file
 % Distributed under GPL 3 or later
 
-\name{blinding}
-\alias{blinding}
+\name{blinding.est}
+\alias{blinding.est}
 \encoding{UTF-8}
 
-\title{Changing Point Estimation for Blinding Data}
+\title{Estimating Effect Size using Blinding Survey Data}
 
 \description{
-  To find the changing point.
+  To estimate the effect size from an RCT with blinding survey data.
 }
 
 \usage{
-  blinding(x, y)
+  blinding.est(x, group, guess, type='cpe')
 }
 
 \arguments{
-  \item{x,y}{paired vectors - sorted by 'x'.}
+  \item{x}{outcome variable, continuous, missing values not allowed.}
+  \item{group}{arm/group assignment; must have two levels. Missing values not allowed.}
+  \item{guess}{Responses from blinding survey, can be two
+  (0=sham/1=active treatment) or three (0=sham/1=active treatment/2=I
+  don't know) levels.}
+  \item{type}{three options: "simple" - ignoring blinding survey
+  result. "adjusted" - unblinding adjusted estimate using 'guess' as a
+  covariate in a regression model. "cpe" - change-point approach.}
 }
 
 \details{
- using the likelihood ratio test with two linear fits  
+ Point estimate, bootstrapping estimate, with/without multiple
+ imputation if missing values exist in 'guess'.
+ TBA  
 }
 
 \value{
-  the changing point at 'x'.
+  TBA
 }
 
 \examples{
@@ -35,9 +44,7 @@
  plot(y~x)
  abline(a=10,b=0.5, col='red',lty=2)
  abline(a=1,b=1.5, col='blue',lty=2)
- blinding(x,y)
 }
 
-\keyword{distribution}
 \keyword{stats}
 

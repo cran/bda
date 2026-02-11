@@ -1,12 +1,13 @@
-f04934e0521e3881c1d6245a6f548cd8 *DESCRIPTION
-0cfff799e2e434dbd408e97d55e83317 *NAMESPACE
+3da5a5d099e58131f4359c56b0cdb2f4 *DESCRIPTION
+351eac264431b7f4fe34eb45bdf4204f *NAMESPACE
 4cc22548ba40db6396e78538f1548176 *PORTING
 a2277e23c389410c197701ec184a57c4 *R/PROtest.R
 2fd3e28c3120942f3a97f0d3b3470816 *R/Pareto.R
 051f7eb950f96bfaa11208a82cdccd26 *R/TestMediation.R
 18f95f05aad4cc2121c68af29cd04daa *R/Zipf.R
 42069163b38282105701cf6b7502c012 *R/binning.R
-f66382e3d7e51bbc95b42db39e203505 *R/blinding.R
+396d69c213151963149f3387dabddc8d *R/blindingEST.R
+c234d8d0c9872a7587048457b2453f49 *R/blindingTEST.R
 8850201709f6158b8ba59b249e64fdcc *R/bootPRO.R
 1f3e0edebc9f9e397c5a9d3d53aabc8a *R/bootkde.R
 b28e08ea4842bb0f0ae1e8929bc09e4c *R/bootnpr.R
@@ -37,7 +38,8 @@ a24bde6207ac4a22fdf9f3d3380470eb *man/EUFirmSize.Rd
 a7d1542ce6408bf8a626c106340a330e *man/ZipfNorm.Rd
 0d8e393ca82b2e16ae5b285ca3405270 *man/bda.Rd
 6e86b7c4332f76ab515f88f1d20d2739 *man/binning.Rd
-e3803270c98f3a4b6a5efc298e62b21c *man/blinding.Rd
+3a4175ce8caeca62cd694a245cf6d842 *man/blinding.Rd
+c954f6a75f90f04b80a3977f54e13254 *man/blindingBI.Rd
 5e069885d65c9d279b0bb667a2ee1b7f *man/bootKDE.Rd
 9bcba629e46ed82a350467d9682f9060 *man/bootPRO.Rd
 e230ee35205c3d1cc341a01d02a92c79 *man/dataBreastCancer.Rd
@@ -59,7 +61,8 @@ be427d0a80eb687d8dc0d9a68c1b40d4 *man/fnm.Rd
 481550a1cdaedb0ecbb0e8e07eeab354 *man/wkde.Rd
 6eb2387475cc5678aa65eb12800e5181 *src/Makevars
 e73ab761d2ec65fa240f1304e9d29cce *src/ckernel.c
-6cd446edec4e02280e14ca55b41f3695 *src/init.c
+ec99e300ec1dcd6cdbb62d6c8b4efb76 *src/cpe.c
+7249aa98ea22c8d2c504be5a8df7248c *src/init.c
 6fe9fbdf699f19c378955e9ae3454ca7 *src/lognormal.c
 ac9056674eee3acc8eab7fc2c0f2cdc4 *src/lpsmooth.c
 d7771466214829c8b21120cea88bd8d3 *src/npdensity.c

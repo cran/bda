@@ -8,6 +8,11 @@
 #include <math.h>
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
+
+/* Function declarations */
+//SEXP cpe1_call(SEXP, SEXP, SEXP);
+//SEXP cpe2_call(SEXP, SEXP, SEXP, SEXP);
+
 //ckernel.f
 void wlinbin(double *x, double *w, int *n, double *a,
 	     double *b, int *m, int *trun, double *gcounts);
@@ -255,6 +260,9 @@ static const R_FortranMethodDef FortEntries[] = {
   {"lprLap", (DL_FUNC) & lprLap, 8},
   {"wlprNorm", (DL_FUNC) & wlprNorm, 8},
   {"awlprNorm", (DL_FUNC) & awlprNorm, 7},
+  
+  //{"cpe1_call", (DL_FUNC) &cpe1_call, 3},
+  //{"cpe2_call", (DL_FUNC) &cpe2_call, 4},
 
   {"chgpt", (DL_FUNC) & chgpt, 5},
   {NULL, NULL, 0}
